@@ -36,12 +36,13 @@ model = None
 preprocess = None
 categories = None
 device = None
+model_kind = "classifier"
 
 
 @app.on_event("startup")
 def startup_event() -> None:
-    global model, preprocess, categories, device
-    model, preprocess, categories, device = load_model(settings)
+    global model, preprocess, categories, device, model_kind
+    model, preprocess, categories, device, model_kind = load_model(settings)
     logger.info("model_loaded=%s", settings.model_name)
 
 
@@ -55,9 +56,25 @@ async def predict(file: UploadFile = File(...)) -> dict:
     payload = await file.read()
     image = Image.open(io.BytesIO(payload)).convert("RGB")
     start = time.perf_counter()
-    results = predict_pil(model, preprocess, categories, device, image, settings.class_topk)
+    results = predict_pil(
+        model,
+        preprocess,
+        categories,
+        device,
+        image,
+        settings.class_topk,
+        model_kind=model_kind,
+        person_score_threshold=settings.person_score_threshold,
+    )
     metrics.record(time.perf_counter() - start)
-    return {"predictions": results}
+    has_person = None
+    if model_kind == "detector":
+        has_person = any(
+            item.get("label") == "person"
+            and item.get("score", 0) >= settings.person_score_threshold
+            for item in results
+        )
+    return {"predictions": results, "has_person": has_person}
 
 
 @app.get("/stream")
@@ -82,12 +99,27 @@ def stream(
                     continue
                 start = time.perf_counter()
                 preds = predict_bgr(
-                    model, preprocess, categories, device, frame, settings.class_topk
+                    model,
+                    preprocess,
+                    categories,
+                    device,
+                    frame,
+                    settings.class_topk,
+                    model_kind=model_kind,
+                    person_score_threshold=settings.person_score_threshold,
                 )
                 metrics.record(time.perf_counter() - start)
+                has_person = None
+                if model_kind == "detector":
+                    has_person = any(
+                        item.get("label") == "person"
+                        and item.get("score", 0) >= settings.person_score_threshold
+                        for item in preds
+                    )
                 payload = {
                     "timestamp": time.time(),
                     "predictions": preds,
+                    "has_person": has_person,
                 }
                 yield f"data: {json.dumps(payload)}\n\n"
                 count += 1

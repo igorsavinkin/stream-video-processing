@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     save_processed: bool = False
     processed_dir: str = "data/processed"
     class_topk: int = 5
+    person_score_threshold: float = 0.6
     config_path: Optional[str] = None
 
     model_config = SettingsConfigDict(
@@ -43,6 +44,7 @@ class YamlSettings(BaseModel):
     save_processed: Optional[bool] = None
     processed_dir: Optional[str] = None
     class_topk: Optional[int] = None
+    person_score_threshold: Optional[float] = None
 
     model_config = {
         "protected_namespaces": (),

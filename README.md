@@ -7,6 +7,7 @@ inference, API wrapper, Dockerization, CI/CD, and AWS ECS Fargate deployment.
 - RTSP frame ingestion with sampling and reconnection
 - Preprocessing and optional dataset capture
 - Image classification using a pretrained MobileNetV3 model
+- Optional person detection (yes/no) using Faster R-CNN (COCO)
 - FastAPI endpoints: health, predict, stream (SSE)
 - Docker and docker-compose for local runs
 - CI/CD pipeline template for ECR + ECS Fargate
@@ -32,6 +33,14 @@ Open `http://localhost:8000/docs` to test endpoints.
 
 ## RTSP source
 Set `APP_RTSP_URL` in your environment or edit `config.example.yaml`.
+
+## Person detection (yes/no)
+Use the built-in COCO person detector instead of ImageNet classification:
+```bash
+set APP_MODEL_NAME=person_detector
+set APP_PERSON_SCORE_THRESHOLD=0.6
+```
+When enabled, `predictions` includes `person` and `no_person`, plus `has_person`.
 
 ## Capture dataset
 Collect frames from the stream to build a training dataset:

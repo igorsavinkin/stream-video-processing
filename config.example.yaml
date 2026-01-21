@@ -1,11 +1,15 @@
-rtsp_url: C:/Users/igors/Videos/WST/WST-graduation-Video-2025-12-31.mp4
+rtsp_url: 0
+#rtsp_url: video=USB Video Device
+#rtsp_url: C:/Users/igors/Videos/WST/WST-graduation-Video-2025-12-31.mp4
 #rtsp_url: rtsp://wowzaec2demo.streamlock.net/vod/mp4:BigBuckBunny_115k.mov
 frame_sample_fps: 2
 frame_width: 640
 frame_height: 360
 model_name: mobilenet_v3_small
+#model_name: person_detector
 device: cpu
 metrics_log_every: 50
 save_processed: false
 processed_dir: data/processed
 class_topk: 5
+person_score_threshold: 0.6

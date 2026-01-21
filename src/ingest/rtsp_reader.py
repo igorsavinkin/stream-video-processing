@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import threading
 import time
 from typing import Optional
@@ -53,14 +54,39 @@ class RTSPFrameReader:
 
     def _open_capture(self) -> cv2.VideoCapture:
         source = self.rtsp_url
+        if isinstance(source, str) and source.lower() in ("auto", "camera:auto"):
+            return self._open_capture_auto()
         if isinstance(source, str) and source.isdigit():
             source = int(source)
-        cap = cv2.VideoCapture(source)
+        if os.name == "nt" and (
+            isinstance(source, int)
+            or (isinstance(source, str) and source.startswith("video="))
+        ):
+            cap = cv2.VideoCapture(source, cv2.CAP_DSHOW)
+        else:
+            cap = cv2.VideoCapture(source)
         if self.width:
             cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
         if self.height:
             cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
         return cap
+
+    def _open_capture_auto(self) -> cv2.VideoCapture:
+        max_index = 10
+        backend = cv2.CAP_DSHOW if os.name == "nt" else 0
+        for idx in range(max_index):
+            cap = cv2.VideoCapture(idx, backend) if backend else cv2.VideoCapture(idx)
+            if self.width:
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
+            if self.height:
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
+            ok, frame = cap.read()
+            if ok and frame is not None:
+                logger.info("camera_found index=%s", idx)
+                return cap
+            cap.release()
+        logger.warning("camera_auto_failed max_index=%s", max_index)
+        return cv2.VideoCapture(0, backend) if backend else cv2.VideoCapture(0)
 
     def _run(self) -> None:
         cap = self._open_capture()
