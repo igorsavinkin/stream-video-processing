@@ -52,7 +52,10 @@ class RTSPFrameReader:
             return self._latest_frame.copy()
 
     def _open_capture(self) -> cv2.VideoCapture:
-        cap = cv2.VideoCapture(self.rtsp_url)
+        source = self.rtsp_url
+        if isinstance(source, str) and source.isdigit():
+            source = int(source)
+        cap = cv2.VideoCapture(source)
         if self.width:
             cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
         if self.height:
