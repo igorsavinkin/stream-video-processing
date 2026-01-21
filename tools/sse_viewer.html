@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SSE Stream Viewer</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 24px;
+        background: #f7f7f7;
+        color: #222;
+      }
+      .controls {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      input {
+        padding: 8px;
+        min-width: 320px;
+      }
+      button {
+        padding: 8px 12px;
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 16px;
+        margin-top: 12px;
+      }
+      .card {
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        padding: 12px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        border-bottom: 1px solid #eee;
+        padding: 8px;
+        text-align: left;
+        font-size: 14px;
+      }
+      th {
+        background: #fafafa;
+      }
+      .label {
+        font-weight: bold;
+      }
+      .muted {
+        color: #666;
+        font-size: 12px;
+      }
+      pre {
+        background: #fff;
+        padding: 12px;
+        border: 1px solid #ddd;
+        max-height: 70vh;
+        overflow: auto;
+      }
+      .status {
+        margin-top: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>RTSP /stream SSE Viewer</h2>
+    <div class="controls">
+      <input
+        id="streamUrl"
+        type="text"
+        value="http://localhost:8000/stream"
+      />
+      <button id="connectBtn">Connect</button>
+      <button id="disconnectBtn" disabled>Disconnect</button>
+      <button id="clearBtn">Clear</button>
+    </div>
+    <div class="status" id="status">Status: idle</div>
+    <div class="layout">
+      <div class="card">
+        <div class="label">Latest predictions</div>
+        <div class="muted" id="lastTimestamp">No data yet</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Label</th>
+              <th>Score</th>
+            </tr>
+          </thead>
+          <tbody id="predictionsBody"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="label">Raw SSE</div>
+        <pre id="log"></pre>
+      </div>
+    </div>
+
+    <script>
+      const logEl = document.getElementById("log");
+      const statusEl = document.getElementById("status");
+      const streamUrlEl = document.getElementById("streamUrl");
+      const connectBtn = document.getElementById("connectBtn");
+      const disconnectBtn = document.getElementById("disconnectBtn");
+      const clearBtn = document.getElementById("clearBtn");
+      const predictionsBody = document.getElementById("predictionsBody");
+      const lastTimestamp = document.getElementById("lastTimestamp");
+
+      let source = null;
+
+      function appendLog(message) {
+        logEl.textContent += message + "\n";
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      function setStatus(message) {
+        statusEl.textContent = `Status: ${message}`;
+      }
+
+      function renderPredictions(payload) {
+        const timestamp = payload.timestamp
+          ? new Date(payload.timestamp * 1000).toLocaleString()
+          : "unknown";
+        lastTimestamp.textContent = `Last update: ${timestamp}`;
+        predictionsBody.innerHTML = "";
+        const items = Array.isArray(payload.predictions) ? payload.predictions : [];
+        if (items.length === 0) {
+          const row = document.createElement("tr");
+          const cell = document.createElement("td");
+          cell.colSpan = 2;
+          cell.textContent = "No predictions";
+          row.appendChild(cell);
+          predictionsBody.appendChild(row);
+          return;
+        }
+        items.forEach((item) => {
+          const row = document.createElement("tr");
+          const labelCell = document.createElement("td");
+          const scoreCell = document.createElement("td");
+          labelCell.textContent = item.label ?? "unknown";
+          scoreCell.textContent =
+            typeof item.score === "number" ? item.score.toFixed(4) : item.score;
+          row.appendChild(labelCell);
+          row.appendChild(scoreCell);
+          predictionsBody.appendChild(row);
+        });
+      }
+
+      connectBtn.addEventListener("click", () => {
+        if (source) {
+          source.close();
+        }
+        const url = streamUrlEl.value.trim();
+        if (!url) {
+          setStatus("missing URL");
+          return;
+        }
+        source = new EventSource(url);
+        setStatus("connecting");
+        connectBtn.disabled = true;
+        disconnectBtn.disabled = false;
+
+        source.onopen = () => setStatus("connected");
+        source.onerror = () => {
+          setStatus("error");
+          connectBtn.disabled = false;
+          disconnectBtn.disabled = true;
+        };
+        source.onmessage = (event) => {
+          appendLog(event.data);
+          try {
+            const payload = JSON.parse(event.data);
+            renderPredictions(payload);
+          } catch (err) {
+            setStatus("received non-json payload");
+          }
+        };
+      });
+
+      disconnectBtn.addEventListener("click", () => {
+        if (source) {
+          source.close();
+          source = null;
+        }
+        setStatus("disconnected");
+        connectBtn.disabled = false;
+        disconnectBtn.disabled = true;
+      });
+
+      clearBtn.addEventListener("click", () => {
+        logEl.textContent = "";
+        predictionsBody.innerHTML = "";
+        lastTimestamp.textContent = "No data yet";
+      });
+    </script>
+  </body>
+</html>

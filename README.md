@@ -50,6 +50,10 @@ docker build -t stream-ml-service .
 docker run --env-file .env -p 8000:8000 stream-ml-service
 ```
 
+## SSE viewer & Postman
+- Open `tools/sse_viewer.html` in a browser and click Connect.
+- Import `tools/postman_collection.json` into Postman.
+
 ## CI/CD & AWS
 1. Create AWS resources using Terraform in `infra/`.
 2. Configure GitHub Actions secrets:

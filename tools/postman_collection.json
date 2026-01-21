@@ -1,0 +1,58 @@
+{
+  "info": {
+    "name": "Stream Video ML Service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://localhost:8000/health",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "Predict (multipart image)",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": ""
+            }
+          ]
+        },
+        "url": {
+          "raw": "http://localhost:8000/predict",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["predict"]
+        }
+      }
+    },
+    {
+      "name": "Stream (SSE)",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://localhost:8000/stream",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["stream"]
+        }
+      }
+    }
+  ]
+}

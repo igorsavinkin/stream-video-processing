@@ -28,6 +28,7 @@ class Settings(BaseSettings):
         env_prefix="APP_",
         env_file=".env",
         extra="ignore",
+        protected_namespaces=(),
     )
 
 
@@ -42,6 +43,10 @@ class YamlSettings(BaseModel):
     save_processed: Optional[bool] = None
     processed_dir: Optional[str] = None
     class_topk: Optional[int] = None
+
+    model_config = {
+        "protected_namespaces": (),
+    }
 
 
 def load_settings() -> Settings:
