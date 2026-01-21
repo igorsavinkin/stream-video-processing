@@ -43,7 +43,7 @@ set APP_PERSON_SCORE_THRESHOLD=0.6
 When enabled, `predictions` includes `person` and `no_person`, plus `has_person`.
 
 ## Capture dataset
-Collect frames from the stream to build a training dataset:
+Collect frames from the stream to build a training dataset (`data/raw` folder):
 ```bash
 python -m src.ingest.capture --output data/raw --max-frames 200
 ```
@@ -52,6 +52,13 @@ python -m src.ingest.capture --output data/raw --max-frames 200
 - `GET /health` basic health check
 - `POST /predict` image upload (multipart/form-data)
 - `GET /stream` Server-Sent Events (SSE) with predictions from RTSP stream
+
+## Tests
+Install dev dependencies and run the test suite:
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
 
 ## Docker
 ```bash

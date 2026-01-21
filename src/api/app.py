@@ -20,8 +20,18 @@ from src.model.infer import load_model, predict_bgr, predict_pil
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("api")
+from contextlib import asynccontextmanager
 
-app = FastAPI(title="Stream Video ML Service")
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    global model, preprocess, categories, device, model_kind
+    model, preprocess, categories, device, model_kind = load_model(settings)
+    logger.info("model_loaded=%s", settings.model_name)
+    yield
+
+
+app = FastAPI(title="Stream Video ML Service", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -37,13 +47,6 @@ preprocess = None
 categories = None
 device = None
 model_kind = "classifier"
-
-
-@app.on_event("startup")
-def startup_event() -> None:
-    global model, preprocess, categories, device, model_kind
-    model, preprocess, categories, device, model_kind = load_model(settings)
-    logger.info("model_loaded=%s", settings.model_name)
 
 
 @app.get("/health")
