@@ -6,8 +6,8 @@ rtsp_url: auto
 frame_sample_fps: 2
 frame_width: 640
 frame_height: 360
-model_name: mobilenet_v3_small
-#model_name: person_detector
+#model_name: mobilenet_v3_small
+model_name: person_detector
 device: cpu
 metrics_log_every: 50
 save_processed: false
