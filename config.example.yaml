@@ -1,4 +1,5 @@
-rtsp_url: rtsp://wowzaec2demo.streamlock.net/vod/mp4:BigBuckBunny_115k.mov
+rtsp_url: C:/Users/igors/Videos/WST/WST-graduation-Video-2025-12-31.mp4
+# rtsp://wowzaec2demo.streamlock.net/vod/mp4:BigBuckBunny_115k.mov
 frame_sample_fps: 2
 frame_width: 640
 frame_height: 360

@@ -9,6 +9,7 @@ from typing import Optional
 import uvicorn
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 
 from src.config import load_settings
@@ -21,6 +22,13 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("api")
 
 app = FastAPI(title="Stream Video ML Service")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 settings = load_settings()
 metrics = Metrics(log_every=settings.metrics_log_every)
 
