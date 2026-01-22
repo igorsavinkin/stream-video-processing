@@ -6,6 +6,7 @@ rtsp_url: auto
 frame_sample_fps: 2
 frame_width: 640
 frame_height: 360
+#camera_name: USB Video Device
 #model_name: mobilenet_v3_small
 model_name: person_detector
 device: cpu

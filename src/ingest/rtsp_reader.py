@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import subprocess
 import threading
 import time
 from typing import Optional
@@ -20,12 +21,14 @@ class RTSPFrameReader:
         target_fps: int,
         width: Optional[int] = None,
         height: Optional[int] = None,
+        camera_name: Optional[str] = None,
         reconnect_delay: float = 2.0,
     ) -> None:
         self.rtsp_url = rtsp_url
         self.target_fps = target_fps
         self.width = width
         self.height = height
+        self.camera_name = camera_name
         self.reconnect_delay = reconnect_delay
         self._frame_lock = threading.Lock()
         self._latest_frame: Optional[np.ndarray] = None
@@ -55,15 +58,26 @@ class RTSPFrameReader:
     def _open_capture(self) -> cv2.VideoCapture:
         source = self.rtsp_url
         if isinstance(source, str) and source.lower() in ("auto", "camera:auto"):
-            return self._open_capture_auto()
+            return self._open_capture_auto(preferred_name=self.camera_name)
         if isinstance(source, str) and source.isdigit():
             source = int(source)
-        if os.name == "nt" and (
-            isinstance(source, int)
-            or (isinstance(source, str) and source.startswith("video="))
-        ):
-            cap = cv2.VideoCapture(source, cv2.CAP_DSHOW)
+        if os.name == "nt":
+            if isinstance(source, int):
+                logger.info("camera_open source=%s backend=MSMF", source)
+                cap = cv2.VideoCapture(source, cv2.CAP_MSMF)
+                if not cap.isOpened():
+                    logger.warning("camera_open_failed source=%s backend=MSMF", source)
+                    cap.release()
+                    logger.info("camera_open source=%s backend=DSHOW", source)
+                    cap = cv2.VideoCapture(source, cv2.CAP_DSHOW)
+            elif isinstance(source, str) and source.startswith("video="):
+                logger.info("camera_open source=%s backend=DSHOW", source)
+                cap = cv2.VideoCapture(source, cv2.CAP_DSHOW)
+            else:
+                logger.info("camera_open source=%s backend=default", source)
+                cap = cv2.VideoCapture(source)
         else:
+            logger.info("camera_open source=%s backend=default", source)
             cap = cv2.VideoCapture(source)
         if self.width:
             cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
@@ -71,10 +85,36 @@ class RTSPFrameReader:
             cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
         return cap
 
-    def _open_capture_auto(self) -> cv2.VideoCapture:
+    def _open_capture_auto(self, preferred_name: Optional[str] = None) -> cv2.VideoCapture:
         max_index = 10
-        backend = cv2.CAP_DSHOW if os.name == "nt" else 0
+        backend = cv2.CAP_MSMF if os.name == "nt" else 0
+        logger.info(
+            "camera_auto_start backend=%s max_index=%s",
+            "MSMF" if os.name == "nt" else "default",
+            max_index,
+        )
+        camera_names = self._list_windows_cameras() if os.name == "nt" else []
+        if camera_names:
+            logger.info("camera_devices names=%s", camera_names)
+        tried_indices: list[int] = []
+        tried_names: list[str] = []
+        if preferred_name and os.name == "nt":
+            logger.info("camera_preferred name=%s", preferred_name)
+            cap = cv2.VideoCapture(f"video={preferred_name}", cv2.CAP_DSHOW)
+            tried_names.append(preferred_name)
+            if self.width:
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
+            if self.height:
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
+            ok, frame = cap.read()
+            if ok and frame is not None:
+                logger.info("camera_found name=%s", preferred_name)
+                return cap
+            logger.warning("camera_preferred_failed name=%s", preferred_name)
+            cap.release()
+        available = []
         for idx in range(max_index):
+            tried_indices.append(idx)
             cap = cv2.VideoCapture(idx, backend) if backend else cv2.VideoCapture(idx)
             if self.width:
                 cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
@@ -82,11 +122,69 @@ class RTSPFrameReader:
                 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
             ok, frame = cap.read()
             if ok and frame is not None:
+                available.append(idx)
                 logger.info("camera_found index=%s", idx)
                 return cap
             cap.release()
-        logger.warning("camera_auto_failed max_index=%s", max_index)
+            if os.name == "nt":
+                cap = cv2.VideoCapture(idx, cv2.CAP_DSHOW)
+                if self.width:
+                    cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
+                if self.height:
+                    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
+                ok, frame = cap.read()
+                if ok and frame is not None:
+                    available.append(idx)
+                    logger.info("camera_found index=%s backend=DSHOW", idx)
+                    return cap
+                cap.release()
+        for name in camera_names:
+            tried_names.append(name)
+            cap = cv2.VideoCapture(f"video={name}", cv2.CAP_DSHOW)
+            if self.width:
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
+            if self.height:
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
+            ok, frame = cap.read()
+            if ok and frame is not None:
+                logger.info("camera_found name=%s", name)
+                return cap
+            cap.release()
+        logger.warning(
+            "camera_auto_failed max_index=%s available=%s tried_indices=%s tried_names=%s",
+            max_index,
+            available,
+            tried_indices,
+            tried_names,
+        )
         return cv2.VideoCapture(0, backend) if backend else cv2.VideoCapture(0)
+
+    @staticmethod
+    def _list_windows_cameras() -> list[str]:
+        command = [
+            "powershell",
+            "-NoProfile",
+            "-Command",
+            "$classes = @('Camera','Image');"
+            "$names = @();"
+            "foreach ($c in $classes) {"
+            "try { $names += Get-PnpDevice -Class $c | Select-Object -ExpandProperty FriendlyName } catch {}"
+            "};"
+            "$names | Where-Object { $_ } | Sort-Object -Unique",
+        ]
+        try:
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        except OSError:
+            return []
+        if result.returncode != 0 or not result.stdout:
+            return []
+        names = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+        return names
 
     def _run(self) -> None:
         cap = self._open_capture()

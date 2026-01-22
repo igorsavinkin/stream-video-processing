@@ -65,6 +65,8 @@ pytest
 docker build -t stream-ml-service .
 docker run --env-file .env -p 8000:8000 stream-ml-service
 ```
+**Note:** Docker is optional for local development (you can run via `uvicorn` and a venv).  
+Docker is required for the CI/CD flow (GitHub Actions builds the image and deploys it to AWS ECS).
 
 ## SSE viewer & Postman
 - Open `tools/sse_viewer.html` in a browser and click Connect.

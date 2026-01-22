@@ -28,6 +28,16 @@ async def lifespan(_app: FastAPI):
     global model, preprocess, categories, device, model_kind
     model, preprocess, categories, device, model_kind = load_model(settings)
     logger.info("model_loaded=%s", settings.model_name)
+    logger.info(
+        "settings_loaded rtsp_url=%s model_name=%s device=%s frame=%sx%s fps=%s camera_name=%s",
+        settings.rtsp_url,
+        settings.model_name,
+        settings.device,
+        settings.frame_width,
+        settings.frame_height,
+        settings.frame_sample_fps,
+        settings.camera_name,
+    )
     yield
 
 
@@ -90,6 +100,7 @@ def stream(
         target_fps=settings.frame_sample_fps,
         width=settings.frame_width,
         height=settings.frame_height,
+        camera_name=settings.camera_name,
     ).start()
 
     def event_generator():
