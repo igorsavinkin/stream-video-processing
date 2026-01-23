@@ -4,11 +4,11 @@
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "512",
   "memory": "1024",
-  "executionRoleArn": "REPLACE_ME",
+  "executionRoleArn": "arn:aws:iam::279987127519:role/ecsTaskExecutionRole",
   "containerDefinitions": [
     {
       "name": "stream-ml-service",
-      "image": "REPLACE_ME",
+      "image": "279987127519.dkr.ecr.us-east-1.amazonaws.com/stream-ml-service:latest",
       "essential": true,
       "portMappings": [
         {
