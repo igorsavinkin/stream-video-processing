@@ -30,6 +30,7 @@ The app runs inside a container that exposes port `8000`.
 - ECS Service ( `stream-ml-service-1`)
 - ECS Task Definition (family: `stream-ml-service`)
 - IAM user `github-actions` with ECR/ECS permissions
+- Security group that allows inbound TCP `8000` from your IP (or from ALB)
 
 ## Required GitHub Secrets
 
@@ -82,6 +83,10 @@ ECS:
 
 Logs:
 - CloudWatch Logs → `/ecs/stream-ml-service`
+
+Security groups:
+- ECS Task → Networking → Security groups
+- Ensure inbound rule exists: TCP `8000` from your IP (or ALB SG)
 
 ## Common Issues & Fixes
 
