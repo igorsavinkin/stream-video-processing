@@ -50,7 +50,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 settings = load_settings()
-metrics = Metrics(log_every=settings.metrics_log_every)
+metrics = Metrics(
+    log_every=settings.metrics_log_every,
+    dimensions={
+        "service": "stream-ml-service",
+        "model_name": settings.model_name,
+        "device": settings.device,
+        "camera_name": settings.camera_name,
+    },
+)
 
 model = None
 preprocess = None

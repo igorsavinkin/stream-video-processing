@@ -81,4 +81,4 @@ Docker is required for the CI/CD flow (GitHub Actions builds the image and deplo
 
 ## Monitoring
 - Application logs go to stdout and are collected by CloudWatch Logs in ECS.
-- Metrics snapshots are logged in JSON format by `src/metrics.py`.
+- Metrics snapshots are emitted as single-line JSON for CloudWatch parsing.
