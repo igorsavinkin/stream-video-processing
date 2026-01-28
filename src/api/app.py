@@ -4,6 +4,7 @@ import io
 import json
 import logging
 import time
+from pathlib import Path
 from typing import Optional
 
 import uvicorn
@@ -13,12 +14,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 
 from src.config import load_settings
+from src.inference_capture import InferenceCapture
 from src.ingest.rtsp_reader import RTSPFrameReader
 from src.metrics import Metrics
 from src.model.infer import load_model, predict_bgr, predict_pil
 
 
-logging.basicConfig(level=logging.INFO)
+settings = load_settings()
+logging.basicConfig(level=getattr(logging, settings.log_level.upper(), logging.INFO))
 logger = logging.getLogger("api")
 from contextlib import asynccontextmanager
 
@@ -49,7 +52,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-settings = load_settings()
 metrics = Metrics(
     log_every=settings.metrics_log_every,
     dimensions={
@@ -58,6 +60,13 @@ metrics = Metrics(
         "device": settings.device,
         "camera_name": settings.camera_name,
     },
+)
+capture = InferenceCapture(
+    enabled=settings.capture_inference,
+    output_dir=Path(settings.capture_dir),
+    every_n=settings.capture_every_n,
+    s3_bucket=settings.capture_s3_bucket or None,
+    s3_prefix=settings.capture_s3_prefix,
 )
 
 model = None
@@ -95,6 +104,17 @@ async def predict(file: UploadFile = File(...)) -> dict:
             and item.get("score", 0) >= settings.person_score_threshold
             for item in results
         )
+    capture.maybe_capture(
+        image_pil=image,
+        metadata={
+            "event": "predict",
+            "filename": file.filename,
+            "model_name": settings.model_name,
+            "device": settings.device,
+            "predictions": results,
+            "has_person": has_person,
+        },
+    )
     return {"predictions": results, "has_person": has_person}
 
 
@@ -143,6 +163,18 @@ def stream(
                     "predictions": preds,
                     "has_person": has_person,
                 }
+                capture.maybe_capture(
+                    image_bgr=frame,
+                    metadata={
+                        "event": "stream",
+                        "frame_index": count,
+                        "rtsp_url": rtsp_url or settings.rtsp_url,
+                        "model_name": settings.model_name,
+                        "device": settings.device,
+                        "predictions": preds,
+                        "has_person": has_person,
+                    },
+                )
                 yield f"data: {json.dumps(payload)}\n\n"
                 count += 1
                 if max_frames and count >= max_frames:

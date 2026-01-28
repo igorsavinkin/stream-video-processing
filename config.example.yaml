@@ -15,3 +15,9 @@ save_processed: false
 processed_dir: data/processed
 class_topk: 5
 person_score_threshold: 0.6
+log_level: INFO
+capture_inference: false
+capture_dir: data/inference
+capture_every_n: 10
+#capture_s3_bucket: your-s3-bucket
+capture_s3_prefix: inference

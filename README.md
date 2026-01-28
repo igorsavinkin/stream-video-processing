@@ -82,3 +82,17 @@ Docker is required for the CI/CD flow (GitHub Actions builds the image and deplo
 ## Monitoring
 - Application logs go to stdout and are collected by CloudWatch Logs in ECS.
 - Metrics snapshots are emitted as single-line JSON for CloudWatch parsing.
+
+## Inference dataset capture
+Enable capture of inference frames + metadata for retraining:
+
+Environment variables:
+- `APP_CAPTURE_INFERENCE=true`
+- `APP_CAPTURE_DIR=data/inference`
+- `APP_CAPTURE_EVERY_N=10`
+- `APP_CAPTURE_S3_BUCKET=your-s3-bucket` (optional)
+- `APP_CAPTURE_S3_PREFIX=inference`
+
+Captured data layout:
+- `YYYY/MM/DD/<timestamp>_<uuid>.jpg`
+- `YYYY/MM/DD/<timestamp>_<uuid>.json`

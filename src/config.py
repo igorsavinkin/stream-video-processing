@@ -25,6 +25,12 @@ class Settings(BaseSettings):
     person_score_threshold: float = 0.6
     camera_name: Optional[str] = None
     config_path: Optional[str] = None
+    log_level: str = "INFO"
+    capture_inference: bool = False
+    capture_dir: str = "data/inference"
+    capture_every_n: int = 10
+    capture_s3_bucket: Optional[str] = None
+    capture_s3_prefix: str = "inference"
 
     model_config = SettingsConfigDict(
         env_prefix="APP_",
@@ -47,6 +53,12 @@ class YamlSettings(BaseModel):
     class_topk: Optional[int] = None
     person_score_threshold: Optional[float] = None
     camera_name: Optional[str] = None
+    log_level: Optional[str] = None
+    capture_inference: Optional[bool] = None
+    capture_dir: Optional[str] = None
+    capture_every_n: Optional[int] = None
+    capture_s3_bucket: Optional[str] = None
+    capture_s3_prefix: Optional[str] = None
 
     model_config = {
         "protected_namespaces": (),
