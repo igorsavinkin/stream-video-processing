@@ -34,6 +34,37 @@ Open `http://localhost:8000/docs` to test endpoints.
 ## RTSP source
 Set `APP_RTSP_URL` in your environment or edit `config.example.yaml`.
 
+### Local RTSP server setup (MediaMTX/FFmpeg)
+
+For local development and testing, you can set up a local RTSP server using MediaMTX or FFmpeg:
+
+#### Option 1: MediaMTX (recommended)
+1. Download MediaMTX from [https://github.com/bluenviron/mediamtx/releases](https://github.com/bluenviron/mediamtx/releases)
+2. Run MediaMTX:
+   ```bash
+   ./mediamtx
+   ```
+3. Stream a video file to MediaMTX using FFmpeg:
+   ```bash
+   ffmpeg -re -stream_loop -1 -i your_video.mp4 -c copy -f rtsp rtsp://localhost:8554/live
+   ```
+4. Use the RTSP URL in your config:
+   ```yaml
+   rtsp_url: rtsp://localhost:8554/live
+   ```
+
+#### Option 2: FFmpeg RTSP server
+1. Stream a video file directly with FFmpeg:
+   ```bash
+   ffmpeg -re -stream_loop -1 -i your_video.mp4 -c copy -f rtsp rtsp://localhost:8554/live
+   ```
+2. Use the RTSP URL in your config:
+   ```yaml
+   rtsp_url: rtsp://localhost:8554/live
+   ```
+
+**Note:** The default RTSP port is 8554. Make sure no firewall is blocking this port.
+
 ## Person detection (yes/no)
 Use the built-in COCO person detector instead of ImageNet classification:
 ```bash
