@@ -65,6 +65,41 @@ For local development and testing, you can set up a local RTSP server using Medi
 
 **Note:** The default RTSP port is 8554. Make sure no firewall is blocking this port.
 
+## ML Models
+
+The service supports two model types:
+
+### MobileNetV3 Small (default)
+- **Type:** Image classifier
+- **Training:** Pretrained on ImageNet-1K (1000 classes)
+- **Input:** Single video frame (BGR image)
+- **Output:** Top-k class predictions with confidence scores
+- **Example output:**
+  ```json
+  [
+    {"label": "golden_retriever", "score": 0.85},
+    {"label": "Labrador_retriever", "score": 0.10},
+    {"label": "dog", "score": 0.03}
+  ]
+  ```
+- **What it recognizes:** 1000 object classes from ImageNet (e.g., "dog", "cat", "car", "person", "bicycle", "bird", "airplane", "groom", "oboe", etc.)
+- **Configuration:** Default model, no additional setup required
+
+### Faster R-CNN Person Detector (optional)
+- **Type:** Object detector
+- **Training:** Pretrained on COCO dataset (80 classes)
+- **Input:** Single video frame
+- **Output:** Binary classification: "person" / "no_person"
+- **Example output:**
+  ```json
+  [
+    {"label": "person", "score": 0.92},
+    {"label": "no_person", "score": 0.0}
+  ]
+  ```
+- **Use case:** Simple presence detection (is there a person in the frame?)
+- **Configuration:** Set `APP_MODEL_NAME=person_detector`
+
 ## Person detection (yes/no)
 Use the built-in COCO person detector instead of ImageNet classification:
 ```bash
