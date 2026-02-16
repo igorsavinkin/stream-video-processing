@@ -22,3 +22,4 @@ capture_dir: data/inference
 capture_every_n: 10
 #capture_s3_bucket: your-s3-bucket
 capture_s3_prefix: inference
+#fallback_mp4_path: C:/Users/igors/Videos/WST/WST-graduation-Video-2025-12-31.mp4
