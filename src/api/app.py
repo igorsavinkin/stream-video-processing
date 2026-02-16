@@ -13,6 +13,7 @@ from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 
+import cv2
 from src.config import load_settings
 from src.inference_capture import InferenceCapture
 from src.ingest.rtsp_reader import RTSPFrameReader
@@ -81,6 +82,52 @@ def health() -> dict:
     return {"status": "ok"}
 
 
+@app.get("/health/stream")
+def health_stream(rtsp_url: Optional[str] = None) -> dict:
+    """Check if the RTSP stream is accessible and healthy."""
+    url = rtsp_url or settings.rtsp_url
+    timeout = 3.0  # seconds
+    
+    try:
+        # Try to open the stream and read one frame
+        cap = cv2.VideoCapture(url)
+        if not cap.isOpened():
+            return {
+                "status": "fail",
+                "rtsp_url": url,
+                "error": "Failed to open stream",
+            }
+        
+        # Set a timeout for reading
+        cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, timeout * 1000)
+        start_time = time.time()
+        ok, frame = cap.read()
+        elapsed = time.time() - start_time
+        cap.release()
+        
+        if ok and frame is not None:
+            return {
+                "status": "ok",
+                "rtsp_url": url,
+                "frame_shape": list(frame.shape) if frame is not None else None,
+                "response_time_ms": round(elapsed * 1000, 2),
+            }
+        else:
+            return {
+                "status": "fail",
+                "rtsp_url": url,
+                "error": "Failed to read frame from stream",
+                "response_time_ms": round(elapsed * 1000, 2),
+            }
+    except Exception as e:
+        logger.exception("Stream health check failed")
+        return {
+            "status": "fail",
+            "rtsp_url": url,
+            "error": str(e),
+        }
+
+
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)) -> dict:
     payload = await file.read()
@@ -129,6 +176,7 @@ def stream(
         width=settings.frame_width,
         height=settings.frame_height,
         camera_name=settings.camera_name,
+        fallback_mp4_path=settings.fallback_mp4_path,
     ).start()
 
     def event_generator():

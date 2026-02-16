@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     capture_every_n: int = 10
     capture_s3_bucket: Optional[str] = None
     capture_s3_prefix: str = "inference"
+    fallback_mp4_path: Optional[str] = None
 
     model_config = SettingsConfigDict(
         env_prefix="APP_",
@@ -59,6 +60,7 @@ class YamlSettings(BaseModel):
     capture_every_n: Optional[int] = None
     capture_s3_bucket: Optional[str] = None
     capture_s3_prefix: Optional[str] = None
+    fallback_mp4_path: Optional[str] = None
 
     model_config = {
         "protected_namespaces": (),

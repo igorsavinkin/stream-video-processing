@@ -5,6 +5,7 @@ import os
 import subprocess
 import threading
 import time
+from pathlib import Path
 from typing import Optional
 
 import cv2
@@ -23,6 +24,7 @@ class RTSPFrameReader:
         height: Optional[int] = None,
         camera_name: Optional[str] = None,
         reconnect_delay: float = 2.0,
+        fallback_mp4_path: Optional[str] = None,
     ) -> None:
         self.rtsp_url = rtsp_url
         self.target_fps = target_fps
@@ -30,11 +32,14 @@ class RTSPFrameReader:
         self.height = height
         self.camera_name = camera_name
         self.reconnect_delay = reconnect_delay
+        self.fallback_mp4_path = fallback_mp4_path
         self._frame_lock = threading.Lock()
         self._latest_frame: Optional[np.ndarray] = None
         self._stop_event = threading.Event()
         self._thread: Optional[threading.Thread] = None
         self._last_emit_time = 0.0
+        self._using_fallback = False
+        self._current_source = rtsp_url
 
     def start(self) -> "RTSPFrameReader":
         if self._thread and self._thread.is_alive():
@@ -56,7 +61,7 @@ class RTSPFrameReader:
             return self._latest_frame.copy()
 
     def _open_capture(self) -> cv2.VideoCapture:
-        source = self.rtsp_url
+        source = self._current_source
         if isinstance(source, str) and source.lower() in ("auto", "camera:auto"):
             return self._open_capture_auto(preferred_name=self.camera_name)
         if isinstance(source, str) and source.isdigit():
@@ -84,6 +89,21 @@ class RTSPFrameReader:
         if self.height:
             cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
         return cap
+    
+    def _try_fallback(self) -> bool:
+        """Try to fallback to local MP4 if available and RTSP failed."""
+        if self._using_fallback or not self.fallback_mp4_path:
+            return False
+        
+        fallback_path = Path(self.fallback_mp4_path)
+        if not fallback_path.exists():
+            logger.warning("fallback_mp4_not_found path=%s", self.fallback_mp4_path)
+            return False
+        
+        logger.info("fallback_to_mp4 rtsp_url=%s fallback=%s", self.rtsp_url, self.fallback_mp4_path)
+        self._current_source = str(fallback_path.absolute())
+        self._using_fallback = True
+        return True
 
     def _open_capture_auto(self, preferred_name: Optional[str] = None) -> cv2.VideoCapture:
         max_index = 10
@@ -188,14 +208,30 @@ class RTSPFrameReader:
 
     def _run(self) -> None:
         cap = self._open_capture()
+        consecutive_failures = 0
+        max_failures_before_fallback = 3
+        
         while not self._stop_event.is_set():
             ok, frame = cap.read()
             if not ok or frame is None:
-                logger.warning("RTSP read failed, reconnecting...")
+                consecutive_failures += 1
+                logger.warning("RTSP read failed, consecutive_failures=%s", consecutive_failures)
+                
+                # Try fallback if we haven't already and have exceeded failure threshold
+                if not self._using_fallback and consecutive_failures >= max_failures_before_fallback:
+                    if self._try_fallback():
+                        cap.release()
+                        cap = self._open_capture()
+                        consecutive_failures = 0
+                        continue
+                
                 cap.release()
                 time.sleep(self.reconnect_delay)
                 cap = self._open_capture()
                 continue
+            
+            # Reset failure counter on successful read
+            consecutive_failures = 0
             now = time.time()
             if self.target_fps > 0:
                 min_interval = 1.0 / self.target_fps
