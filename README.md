@@ -38,12 +38,28 @@ Set `APP_RTSP_URL` in your environment or edit `config.example.yaml`.
 
 For local development and testing, you can set up a local RTSP server using MediaMTX or FFmpeg:
 
+**Prerequisites:** Install FFmpeg (required for streaming video to MediaMTX):
+- **Windows**: 
+  - Using winget: `winget install ffmpeg`
+  - Using Chocolatey: `choco install ffmpeg`
+  - Manual: Download from [https://ffmpeg.org/download.html](https://ffmpeg.org/download.html) and add to PATH
+- **Linux**: `sudo apt install ffmpeg` (Ubuntu/Debian) or `sudo yum install ffmpeg` (RHEL/CentOS)
+- **Mac**: `brew install ffmpeg`
+
 #### Option 1: MediaMTX (recommended)
-1. Download MediaMTX from [https://github.com/bluenviron/mediamtx/releases](https://github.com/bluenviron/mediamtx/releases)
+1. Download MediaMTX binary from [https://github.com/bluenviron/mediamtx/releases](https://github.com/bluenviron/mediamtx/releases):
+   - **Windows**: Download `mediamtx_vX.X.X_windows_amd64.zip` (or `.exe`)
+   - **Linux/Mac**: Download the appropriate binary for your platform
+   - Extract the archive to any directory (e.g., `C:\tools\mediamtx\` or `~/tools/mediamtx/`)
 2. Run MediaMTX:
    ```bash
+   # Windows
+   mediamtx.exe
+   
+   # Linux/Mac
    ./mediamtx
    ```
+   MediaMTX will start and listen on `rtsp://localhost:8554` by default.
 3. Stream a video file to MediaMTX using FFmpeg:
    ```bash
    ffmpeg -re -stream_loop -1 -i your_video.mp4 -c copy -f rtsp rtsp://localhost:8554/live
