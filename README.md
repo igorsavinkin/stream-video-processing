@@ -81,6 +81,23 @@ For local development and testing, you can set up a local RTSP server using Medi
 
 **Note:** The default RTSP port is 8554. Make sure no firewall is blocking this port.
 
+#### Viewing the RTSP stream
+
+Once your video is streaming to MediaMTX, you can view it using:
+
+- **VLC Media Player** (recommended):
+  1. Download from [https://www.videolan.org/vlc/](https://www.videolan.org/vlc/)
+  2. Open VLC → Media → Open Network Stream (or press `Ctrl+N`)
+  3. Enter: `rtsp://localhost:8554/live`
+  4. Click Play
+
+- **FFplay** (comes with FFmpeg):
+  ```bash
+  ffplay rtsp://localhost:8554/live
+  ```
+
+- **Other players**: PotPlayer, MPC-HC, or any RTSP-compatible media player
+
 ## ML Models
 
 The service supports two model types:
