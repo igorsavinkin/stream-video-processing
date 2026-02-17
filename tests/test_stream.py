@@ -119,8 +119,16 @@ def test_stream_endpoint_with_local_video(sample_video, monkeypatch):
     # Verify video file exists
     assert Path(sample_video).exists(), f"Video file does not exist: {sample_video}"
     
+    # Mock the model loading and prediction functions
     monkeypatch.setattr(app_module, "load_model", _dummy_load_model)
     monkeypatch.setattr(app_module, "predict_bgr", _dummy_predict_bgr)
+    
+    # Set the global model variables that the endpoint uses
+    app_module.model = object()
+    app_module.preprocess = object()
+    app_module.categories = ["class_a", "class_b"]
+    app_module.device = "cpu"
+    app_module.model_kind = "classifier"
     
     with TestClient(app_module.app) as client:
         response = client.get(f"/stream?rtsp_url={sample_video}&max_frames=3", stream=True)
@@ -159,6 +167,13 @@ def test_stream_endpoint_max_frames_limit(sample_video, monkeypatch):
     monkeypatch.setattr(app_module, "load_model", _dummy_load_model)
     monkeypatch.setattr(app_module, "predict_bgr", _dummy_predict_bgr)
     
+    # Set the global model variables
+    app_module.model = object()
+    app_module.preprocess = object()
+    app_module.categories = ["class_a", "class_b"]
+    app_module.device = "cpu"
+    app_module.model_kind = "classifier"
+    
     with TestClient(app_module.app) as client:
         max_frames = 2
         response = client.get(f"/stream?rtsp_url={sample_video}&max_frames={max_frames}", stream=True)
@@ -184,6 +199,13 @@ def test_stream_endpoint_sse_format(sample_video, monkeypatch):
     
     monkeypatch.setattr(app_module, "load_model", _dummy_load_model)
     monkeypatch.setattr(app_module, "predict_bgr", _dummy_predict_bgr)
+    
+    # Set the global model variables
+    app_module.model = object()
+    app_module.preprocess = object()
+    app_module.categories = ["class_a", "class_b"]
+    app_module.device = "cpu"
+    app_module.model_kind = "classifier"
     
     with TestClient(app_module.app) as client:
         response = client.get(f"/stream?rtsp_url={sample_video}&max_frames=1", stream=True)
@@ -257,6 +279,13 @@ def test_stream_with_person_detector(sample_video, monkeypatch):
     
     monkeypatch.setattr(app_module, "load_model", _dummy_load_person_detector)
     monkeypatch.setattr(app_module, "predict_bgr", _dummy_predict_person)
+    
+    # Set the global model variables for person detector
+    app_module.model = object()
+    app_module.preprocess = object()
+    app_module.categories = ["person", "no_person"]
+    app_module.device = "cpu"
+    app_module.model_kind = "detector"
     
     with TestClient(app_module.app) as client:
         response = client.get(f"/stream?rtsp_url={sample_video}&max_frames=2", stream=True)
