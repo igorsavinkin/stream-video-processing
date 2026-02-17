@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Optional
 
+from src.ingest.schema_validator import validate_event
+
 logger = logging.getLogger("metadata_producer")
 
 
@@ -115,6 +117,9 @@ class KafkaProducer(MetadataProducer):
     def send(self, event: MetadataEvent) -> bool:
         """Send event to Kafka with retry logic."""
         event_dict = event.to_dict()
+        # Validate event against schema (non-strict: logs warning on failure)
+        if not validate_event(event_dict, strict=False):
+            logger.warning("Event validation failed, but continuing with send")
         for attempt in range(self.max_retries + 1):
             try:
                 future = self.producer.send(self.topic, event_dict)
@@ -202,6 +207,9 @@ class KinesisProducer(MetadataProducer):
     def send(self, event: MetadataEvent) -> bool:
         """Send event to Kinesis with retry logic."""
         event_dict = event.to_dict()
+        # Validate event against schema (non-strict: logs warning on failure)
+        if not validate_event(event_dict, strict=False):
+            logger.warning("Event validation failed, but continuing with send")
         data = json.dumps(event_dict).encode("utf-8")
 
         # Use timestamp as partition key for even distribution
