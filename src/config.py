@@ -32,6 +32,14 @@ class Settings(BaseSettings):
     capture_s3_bucket: Optional[str] = None
     capture_s3_prefix: str = "inference"
     fallback_mp4_path: Optional[str] = None
+    # Streaming metadata ingestion
+    streaming_backend: str = "none"  # "kafka", "kinesis", or "none"
+    kafka_bootstrap_servers: Optional[str] = None
+    kafka_topic: str = "inference-events"
+    kinesis_stream_name: Optional[str] = None
+    kinesis_region: str = "us-east-1"
+    streaming_max_retries: int = 3
+    streaming_retry_backoff_ms: int = 100
 
     model_config = SettingsConfigDict(
         env_prefix="APP_",
@@ -61,6 +69,14 @@ class YamlSettings(BaseModel):
     capture_s3_bucket: Optional[str] = None
     capture_s3_prefix: Optional[str] = None
     fallback_mp4_path: Optional[str] = None
+    # Streaming metadata ingestion
+    streaming_backend: Optional[str] = None
+    kafka_bootstrap_servers: Optional[str] = None
+    kafka_topic: Optional[str] = None
+    kinesis_stream_name: Optional[str] = None
+    kinesis_region: Optional[str] = None
+    streaming_max_retries: Optional[int] = None
+    streaming_retry_backoff_ms: Optional[int] = None
 
     model_config = {
         "protected_namespaces": (),

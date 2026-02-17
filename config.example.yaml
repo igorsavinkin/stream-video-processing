@@ -23,3 +23,16 @@ capture_every_n: 10
 #capture_s3_bucket: your-s3-bucket
 capture_s3_prefix: inference
 #fallback_mp4_path: C:/Users/igors/Videos/WST/WST-graduation-Video-2025-12-31.mp4
+
+# Streaming metadata ingestion (Kafka/Kinesis)
+# Options: "none", "kafka", "kinesis"
+streaming_backend: none
+# Kafka configuration (when streaming_backend=kafka)
+#kafka_bootstrap_servers: localhost:9092
+#kafka_topic: inference-events
+# Kinesis configuration (when streaming_backend=kinesis)
+#kinesis_stream_name: inference-events
+#kinesis_region: us-east-1
+# Retry configuration
+streaming_max_retries: 3
+streaming_retry_backoff_ms: 100
