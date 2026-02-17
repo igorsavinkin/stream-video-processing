@@ -40,6 +40,50 @@ def test_health_endpoint(monkeypatch):
     assert response.json() == {"status": "ok"}
 
 
+def test_health_stream_endpoint(monkeypatch):
+    import src.api.app as app_module
+    import cv2
+
+    def _mock_videocapture_success(url):
+        """Mock VideoCapture that successfully opens and reads a frame."""
+        cap = type("MockCapture", (), {})()
+        cap.isOpened = lambda: True
+        cap.set = lambda prop, value: None
+        cap.read = lambda: (True, np.zeros((100, 100, 3), dtype=np.uint8))
+        cap.release = lambda: None
+        return cap
+
+    def _mock_videocapture_fail(url):
+        """Mock VideoCapture that fails to open."""
+        cap = type("MockCapture", (), {})()
+        cap.isOpened = lambda: False
+        cap.release = lambda: None
+        return cap
+
+    monkeypatch.setattr(app_module, "load_model", _dummy_load_model)
+    
+    # Test successful stream
+    monkeypatch.setattr(cv2, "VideoCapture", _mock_videocapture_success)
+    with TestClient(app_module.app) as client:
+        response = client.get("/health/stream")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "ok"
+    assert "rtsp_url" in payload
+    assert "frame_shape" in payload
+    assert "response_time_ms" in payload
+    
+    # Test failed stream
+    monkeypatch.setattr(cv2, "VideoCapture", _mock_videocapture_fail)
+    with TestClient(app_module.app) as client:
+        response = client.get("/health/stream")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "fail"
+    assert "rtsp_url" in payload
+    assert "error" in payload
+
+
 def test_predict_endpoint(monkeypatch):
     import src.api.app as app_module
 
