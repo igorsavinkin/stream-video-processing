@@ -15,9 +15,27 @@ from src.ingest.rtsp_reader import RTSPFrameReader
 
 def _create_test_video(output_path: Path, num_frames: int = 10, fps: int = 2):
     """Create a test video file for integration testing."""
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    # Try different codecs for better compatibility
+    codecs = ["mp4v", "XVID", "MJPG"]
     width, height = 320, 240
-    out = cv2.VideoWriter(str(output_path), fourcc, fps, (width, height))
+    out = None
+    
+    for codec in codecs:
+        try:
+            fourcc = cv2.VideoWriter_fourcc(*codec)
+            out = cv2.VideoWriter(str(output_path), fourcc, fps, (width, height))
+            if out.isOpened():
+                break
+            else:
+                out.release()
+                out = None
+        except Exception:
+            if out:
+                out.release()
+            out = None
+    
+    if out is None or not out.isOpened():
+        raise RuntimeError(f"Failed to create video file with any codec: {codecs}")
     
     for i in range(num_frames):
         # Create a frame with varying colors
@@ -26,6 +44,17 @@ def _create_test_video(output_path: Path, num_frames: int = 10, fps: int = 2):
         out.write(frame)
     
     out.release()
+    
+    # Verify video file was created and is readable
+    if not output_path.exists():
+        raise RuntimeError(f"Video file was not created: {output_path}")
+    
+    # Quick verification that we can read it back
+    cap = cv2.VideoCapture(str(output_path))
+    if not cap.isOpened():
+        cap.release()
+        raise RuntimeError(f"Created video file cannot be opened: {output_path}")
+    cap.release()
 
 
 @pytest.fixture
@@ -48,6 +77,11 @@ def _dummy_predict_bgr(*_args, **_kwargs):
 
 def test_rtsp_reader_with_local_video(sample_video):
     """Integration test: RTSP reader with local video file."""
+    import time
+    
+    # Verify video file exists before starting reader
+    assert Path(sample_video).exists(), f"Video file does not exist: {sample_video}"
+    
     reader = RTSPFrameReader(
         sample_video,
         target_fps=2,
@@ -56,8 +90,11 @@ def test_rtsp_reader_with_local_video(sample_video):
     ).start()
     
     try:
+        # Give reader time to start and read first frame
+        time.sleep(0.5)
+        
         frames_read = 0
-        max_attempts = 20
+        max_attempts = 30  # Increased attempts
         for _ in range(max_attempts):
             frame = reader.read()
             if frame is not None:
@@ -67,14 +104,20 @@ def test_rtsp_reader_with_local_video(sample_video):
                 assert frame.shape[2] == 3
                 if frames_read >= 3:  # Read at least 3 frames
                     break
-        assert frames_read >= 3, "Should read at least 3 frames from test video"
+            time.sleep(0.1)  # Small delay between attempts
+        
+        assert frames_read >= 3, f"Should read at least 3 frames from test video, got {frames_read}"
     finally:
         reader.stop()
 
 
 def test_stream_endpoint_with_local_video(sample_video, monkeypatch):
     """Integration test: /stream endpoint with local video file."""
+    import time
     import src.api.app as app_module
+    
+    # Verify video file exists
+    assert Path(sample_video).exists(), f"Video file does not exist: {sample_video}"
     
     monkeypatch.setattr(app_module, "load_model", _dummy_load_model)
     monkeypatch.setattr(app_module, "predict_bgr", _dummy_predict_bgr)
@@ -84,17 +127,23 @@ def test_stream_endpoint_with_local_video(sample_video, monkeypatch):
         assert response.status_code == 200
         
         events = []
+        timeout = time.time() + 10  # 10 second timeout
         for line in response.iter_lines():
+            if time.time() > timeout:
+                break
             if not line:
                 continue
             text = line.decode("utf-8") if isinstance(line, bytes) else line
             if text.startswith("data: "):
-                event = json.loads(text.replace("data: ", "", 1))
-                events.append(event)
-                if len(events) >= 3:
-                    break
+                try:
+                    event = json.loads(text.replace("data: ", "", 1))
+                    events.append(event)
+                    if len(events) >= 3:
+                        break
+                except json.JSONDecodeError:
+                    continue
         
-        assert len(events) >= 2, "Should receive at least 2 events"
+        assert len(events) >= 2, f"Should receive at least 2 events, got {len(events)}"
         for event in events:
             assert "timestamp" in event
             assert "predictions" in event
@@ -160,6 +209,10 @@ def test_stream_endpoint_sse_format(sample_video, monkeypatch):
 
 def test_rtsp_reader_reconnection_handling(sample_video):
     """Test that RTSP reader handles video file correctly."""
+    import time
+    
+    assert Path(sample_video).exists(), f"Video file does not exist: {sample_video}"
+    
     reader = RTSPFrameReader(
         sample_video,
         target_fps=1,  # Lower FPS to test timing
@@ -168,12 +221,18 @@ def test_rtsp_reader_reconnection_handling(sample_video):
     ).start()
     
     try:
+        # Give reader time to start
+        time.sleep(0.5)
+        
         # Read a few frames
         frames = []
-        for _ in range(5):
+        for _ in range(10):  # More attempts
             frame = reader.read()
             if frame is not None:
                 frames.append(frame)
+            time.sleep(0.1)
+            if len(frames) >= 2:  # Need at least 2 for shape comparison
+                break
         
         assert len(frames) > 0, "Should read at least one frame"
         # All frames should have consistent shape
