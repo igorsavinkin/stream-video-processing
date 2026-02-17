@@ -34,6 +34,115 @@ Open `http://localhost:8000/docs` to test endpoints.
 ## RTSP source
 Set `APP_RTSP_URL` in your environment or edit `config.example.yaml`.
 
+## Runbook: Common Video Source Recipes
+
+Quick reference for setting up different video sources.
+
+### Recipe 1: Local MP4 File
+
+Use a local video file directly as the video source.
+
+**Option A: Via config file**
+1. Edit `config.example.yaml`:
+   ```yaml
+   rtsp_url: C:/path/to/your/video.mp4
+   ```
+   Or use forward slashes: `C:/Users/username/Videos/video.mp4`
+
+2. Run the API:
+   ```bash
+   set APP_CONFIG_PATH=config.example.yaml
+   uvicorn src.api.app:app --host 0.0.0.0 --port 8000
+   ```
+
+**Option B: Via environment variable**
+```bash
+set APP_RTSP_URL=C:/path/to/your/video.mp4
+uvicorn src.api.app:app --host 0.0.0.0 --port 8000
+```
+
+**Notes:**
+- The video will loop automatically
+- Supports common formats: MP4, AVI, MOV, etc.
+- Use absolute paths for best results
+- Windows: Use forward slashes or escaped backslashes
+
+### Recipe 2: Camera by Index
+
+Use a camera device by its index (0, 1, 2, etc.).
+
+**Option A: Via config file**
+1. Edit `config.example.yaml`:
+   ```yaml
+   rtsp_url: 0
+   ```
+   Use `0` for first camera, `1` for second, etc.
+
+2. Run the API:
+   ```bash
+   set APP_CONFIG_PATH=config.example.yaml
+   uvicorn src.api.app:app --host 0.0.0.0 --port 8000
+   ```
+
+**Option B: Via environment variable**
+```bash
+set APP_RTSP_URL=0
+uvicorn src.api.app:app --host 0.0.0.0 --port 8000
+```
+
+**Option C: Auto-detect camera**
+```yaml
+rtsp_url: auto
+```
+This will automatically find and use the first available camera.
+
+**Option D: Camera by name (Windows)**
+```yaml
+rtsp_url: video=USB Video Device
+camera_name: USB Video Device
+```
+Specify the exact camera name if you have multiple cameras.
+
+**Notes:**
+- Camera index starts at 0
+- On Windows, the system will try MSMF backend first, then DSHOW
+- Use `auto` to let the system find the first available camera
+
+### Recipe 3: RTSP Server
+
+Use an RTSP stream from a server (local or remote).
+
+**For local RTSP server (MediaMTX):**
+See the detailed setup in the [Local RTSP server setup](#local-rtsp-server-setup-mediamtxffmpeg) section above.
+
+**Quick setup:**
+1. Start MediaMTX (see setup instructions above)
+2. Stream video to MediaMTX:
+   ```bash
+   ffmpeg -re -stream_loop -1 -i your_video.mp4 -c copy -f rtsp rtsp://localhost:8554/live
+   ```
+3. Configure the service:
+   ```yaml
+   rtsp_url: rtsp://localhost:8554/live
+   ```
+
+**For remote RTSP server:**
+```yaml
+rtsp_url: rtsp://example.com:8554/stream
+```
+
+**Via environment variable:**
+```bash
+set APP_RTSP_URL=rtsp://localhost:8554/live
+uvicorn src.api.app:app --host 0.0.0.0 --port 8000
+```
+
+**Notes:**
+- Default RTSP port is 8554
+- Ensure firewall allows RTSP traffic
+- The service will automatically reconnect if the stream drops
+- Use `/health/stream` endpoint to check stream health
+
 ### Local RTSP server setup (MediaMTX/FFmpeg)
 
 For local development and testing, you can set up a local RTSP server using MediaMTX or FFmpeg:
