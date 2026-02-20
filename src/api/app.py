@@ -17,6 +17,12 @@ from PIL import Image
 import cv2
 from src.config import load_settings
 from src.inference_capture import InferenceCapture
+from src.ingest.metadata_producer import (
+    MetadataEvent,
+    MetadataProducer,
+    StreamingBackend,
+    create_producer,
+)
 from src.ingest.rtsp_reader import RTSPFrameReader
 from src.metrics import Metrics
 from src.model.infer import load_model, predict_bgr, predict_pil
@@ -60,6 +66,9 @@ async def lifespan(_app: FastAPI):
         settings.camera_name,
     )
     yield
+    # Cleanup: close metadata producer
+    if metadata_producer:
+        metadata_producer.close()
 
 
 app = FastAPI(title="Stream Video ML Service", lifespan=lifespan)
@@ -86,6 +95,44 @@ capture = InferenceCapture(
     s3_bucket=settings.capture_s3_bucket or None,
     s3_prefix=settings.capture_s3_prefix,
 )
+
+# Initialize metadata producer
+metadata_producer: Optional[MetadataProducer] = None
+try:
+    backend = StreamingBackend(settings.streaming_backend.lower())
+    if backend != StreamingBackend.NONE:
+        producer_kwargs = {
+            "max_retries": settings.streaming_max_retries,
+            "retry_backoff_ms": settings.streaming_retry_backoff_ms,
+        }
+        if backend == StreamingBackend.KAFKA:
+            if not settings.kafka_bootstrap_servers:
+                logger.warning("Kafka backend selected but bootstrap_servers not configured")
+                backend = StreamingBackend.NONE
+            else:
+                producer_kwargs.update({
+                    "bootstrap_servers": settings.kafka_bootstrap_servers,
+                    "topic": settings.kafka_topic,
+                })
+        elif backend == StreamingBackend.KINESIS:
+            if not settings.kinesis_stream_name:
+                logger.warning("Kinesis backend selected but stream_name not configured")
+                backend = StreamingBackend.NONE
+            else:
+                producer_kwargs.update({
+                    "stream_name": settings.kinesis_stream_name,
+                    "region": settings.kinesis_region,
+                })
+        if backend != StreamingBackend.NONE:
+            metadata_producer = create_producer(backend, **producer_kwargs)
+            logger.info("Metadata producer initialized: backend=%s", backend.value)
+        else:
+            metadata_producer = create_producer(StreamingBackend.NONE)
+    else:
+        metadata_producer = create_producer(StreamingBackend.NONE)
+except Exception as e:
+    logger.error("Failed to initialize metadata producer: %s", e)
+    metadata_producer = create_producer(StreamingBackend.NONE)
 
 model = None
 preprocess = None
@@ -206,6 +253,21 @@ async def predict(request: Request, file: UploadFile = File(...)) -> dict:
         )
         total_latency_ms = (time.perf_counter() - start_time) * 1000
         inference_latency_ms = inference_latency * 1000
+        
+        # Send metadata to streaming backend
+        if metadata_producer:
+            event = MetadataEvent(
+                timestamp=time.time(),
+                topk=results,
+                source="predict",
+                latency_ms=inference_latency_ms,
+                model_name=settings.model_name,
+                device=settings.device,
+                has_person=has_person,
+                request_id=request_id,
+            )
+            metadata_producer.send(event)
+        
         _log_request(
             request_id,
             "/predict",
@@ -289,6 +351,22 @@ def stream(
                         "has_person": has_person,
                     },
                 )
+                
+                # Send metadata to streaming backend
+                if metadata_producer:
+                    event = MetadataEvent(
+                        timestamp=time.time(),
+                        topk=preds,
+                        source=stream_url,
+                        latency_ms=inference_latency * 1000,
+                        model_name=settings.model_name,
+                        device=settings.device,
+                        has_person=has_person,
+                        request_id=request_id,
+                        frame_index=count,
+                    )
+                    metadata_producer.send(event)
+                
                 yield f"data: {json.dumps(payload)}\n\n"
                 count += 1
                 if max_frames and count >= max_frames:

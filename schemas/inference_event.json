@@ -1,0 +1,70 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/your-org/stream-video-processing/schemas/inference_event.json",
+  "title": "Inference Event Schema",
+  "description": "Schema for ML inference metadata events sent to Kafka/Kinesis",
+  "type": "object",
+  "required": ["timestamp", "topk", "source", "latency_ms"],
+  "properties": {
+    "timestamp": {
+      "type": "number",
+      "description": "Unix timestamp (seconds since epoch) when the inference was performed",
+      "minimum": 0
+    },
+    "topk": {
+      "type": "array",
+      "description": "Top-k predictions from the model",
+      "minItems": 0,
+      "items": {
+        "type": "object",
+        "required": ["label", "score"],
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "Class label or category name"
+          },
+          "score": {
+            "type": "number",
+            "description": "Confidence score (0.0 to 1.0)",
+            "minimum": 0.0,
+            "maximum": 1.0
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "source": {
+      "type": "string",
+      "description": "Source identifier: RTSP URL, 'predict' endpoint, or other source identifier",
+      "minLength": 1
+    },
+    "latency_ms": {
+      "type": "number",
+      "description": "Inference latency in milliseconds",
+      "minimum": 0
+    },
+    "model_name": {
+      "type": "string",
+      "description": "Name of the ML model used (e.g., 'mobilenet_v3_small', 'person_detector')"
+    },
+    "device": {
+      "type": "string",
+      "description": "Device used for inference (e.g., 'cpu', 'cuda:0', 'mps')"
+    },
+    "has_person": {
+      "type": "boolean",
+      "description": "Whether a person was detected (only for person_detector model)"
+    },
+    "request_id": {
+      "type": "string",
+      "description": "Unique request identifier for tracing",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "frame_index": {
+      "type": "integer",
+      "description": "Frame index in the stream (only for /stream endpoint)",
+      "minimum": 0
+    }
+  },
+  "additionalProperties": false
+}
