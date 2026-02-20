@@ -16,3 +16,5 @@ build/
 coverage.xml
 .pytest_cache/
 design.txt
+interview-presentation.txt
+questions.txt
