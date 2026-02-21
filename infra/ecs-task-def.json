@@ -1,9 +1,11 @@
 {
   "family": "stream-ml-service",
   "networkMode": "awsvpc",
-  "requiresCompatibilities": ["FARGATE"],
-  "cpu": "512",
-  "memory": "1024",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "1024",
+  "memory": "2048",
   "executionRoleArn": "arn:aws:iam::279987127519:role/ecsTaskExecutionRole",
   "containerDefinitions": [
     {
