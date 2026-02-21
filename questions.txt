@@ -1,0 +1,40 @@
+как генерировать варианты (hooks, creatives) + 
+как собирать performance feedback
+как выбирать winners
+как система “учится” со временем
+
+2️⃣ Design a real-time video ML inference system
+
+RTSP ingestion
+buffering vs streaming
+latency constraints
+horizontal scaling
+failure handling
+
+
+3️⃣ Design an LLM-powered internal tool
+
+async pipelines
+prompt orchestration
+caching
+feedback loops
+cost control
+
+4️⃣ Design a system for continuous model retraining
+
+Ключевые вопросы:
+
+откуда данные?
+когда retrain?
+как валидировать?
+canary / shadow deploy?
+rollback?
+
+
+5️⃣ Design a ranking / recommendation system
+
+
+online vs offline features
+latency budgets
+cold start
+feedback bias

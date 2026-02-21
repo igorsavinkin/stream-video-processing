@@ -124,3 +124,23 @@ GitHub.
 - [ ] ECS cluster + service exist
 - [ ] Task definition registered
 - [ ] Workflow green
+
+## Application Load Balancer (ALB)
+
+The entry point through the ALB is the DNS name of the load balancer. Use it without specifying a port (ALB listens on 80).
+
+**Base URL**
+`http://lb-simple-one-862930693.us-east-1.elb.amazonaws.com`
+
+**Available endpoints**
+- `/health` — health check
+- `/docs` — Swagger UI
+- `/predict` — POST for image upload
+- `/stream` — SSE stream with predictions from RTSP
+
+**Examples**
+- Health check: `http://lb-simple-one-862930693.us-east-1.elb.amazonaws.com/health`
+- API docs: `http://lb-simple-one-862930693.us-east-1.elb.amazonaws.com/docs`
+- Predict: `POST http://lb-simple-one-862930693.us-east-1.elb.amazonaws.com/predict`
+
+ALB redirects traffic from port 80 to port 8000 of the container, so no port is needed in the URL.
