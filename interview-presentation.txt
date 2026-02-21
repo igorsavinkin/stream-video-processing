@@ -1,0 +1,34 @@
+
+SHORT
+(AI / ML Engineer)
+
+«Я проектировал production-ready ML inference систему для real-time video streams.
+
+Основной вызов был не в деплое, а в устойчивой обработке стриминговых данных, контроле latency и масштабировании inference.
+
+Kafka использовалась как event-layer для decoupling ingestion и ML-processing. RTSP потоки нормализовались и подавались в модель, упакованную в контейнер для воспроизводимости.
+
+CI/CD и ECS были нужны, чтобы быстро и безопасно выкатывать новые версии модели, а ALB — чтобы обеспечить стабильный доступ к inference API.
+
+Это позволило итеративно улучшать модель без даунтайма и подготовить систему к future retraining.»
+
+LONG
+“I built a production-grade real-time ML inference system for video streams.”
+
+The goal of the project was not deployment itself, but making a machine learning model reliably work in production with streaming data and low latency.
+
+The system ingests RTSP video streams, processes frames in real time, and runs inference using a computer vision model. One of the main challenges was decoupling ingestion from ML processing so the system could scale and remain stable under variable load.
+
+To solve this, I designed an event-driven architecture where Kafka acts as the backbone between stream ingestion and ML inference. This allowed the ML workers to scale independently and ensured backpressure handling when input streams spiked.
+
+The ML model itself was containerized to guarantee reproducibility and consistent runtime behavior, which is critical for production ML systems. I exposed the inference through a clean API so it could be consumed by downstream services.
+
+CI/CD was implemented to support fast and safe model iteration. Each change produced a new immutable image that could be deployed without downtime. The service was deployed on AWS ECS, and traffic was managed via a load balancer to ensure stable access and horizontal scalability.
+
+From an ML systems perspective, the key outcome was that the model became observable, deployable, and iterable, not just accurate in a notebook. This setup made it possible to evolve the model, retrain it later, and operate it as a real product component rather than a one-off experiment.
+
+Overall, I see this project as ML systems engineering — designing the infrastructure and workflows needed for machine learning models to survive and scale in real-world production environments.
+
+Not DevOps
+“I use DevOps tooling because I own the full lifecycle of ML-backed backend systems.
+My focus is not infrastructure as a product, but shipping, operating, and iterating AI-powered services.”
