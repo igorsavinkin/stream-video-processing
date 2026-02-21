@@ -144,3 +144,49 @@ The entry point through the ALB is the DNS name of the load balancer. Use it wit
 - Predict: `POST http://lb-simple-one-862930693.us-east-1.elb.amazonaws.com/predict`
 
 ALB redirects traffic from port 80 to port 8000 of the container, so no port is needed in the URL.
+
+## Testing AWS Deployment with Local Video
+
+If the application is running in AWS (e.g. via ECS or ALB) and your test videos are located on your local PC, you can use the following methods to test the endpoints.
+
+### Method 1: Uploading a Single Frame to `/predict`
+
+1. **Get the AWS API URL:**
+   - If using an ALB, use its DNS name (e.g., `http://your-alb-name.us-east-1.elb.amazonaws.com`).
+   - If not using an ALB, get the public IP of the ECS task:
+     ```bash
+     aws ecs list-tasks --cluster emotional-parrot
+     aws ecs describe-tasks --cluster emotional-parrot --tasks <task-id>
+     # Or check the AWS Console: ECS -> Tasks -> Networking -> Public IP
+     ```
+
+2. **Extract a frame from your local video (using FFmpeg):**
+   ```bash
+   ffmpeg -i "C:\path\to\your\video.mp4" -ss 00:00:01 -vframes 1 frame.jpg
+   ```
+
+3. **Upload the frame to the API:**
+   ```bash
+   curl -X POST "http://YOUR-AWS-URL/predict" \
+     -H "accept: application/json" \
+     -H "Content-Type: multipart/form-data" \
+     -F "file=@frame.jpg"
+   ```
+   *(Alternatively, you can test this interactively by opening `http://YOUR-AWS-URL/docs` in your browser and using the Swagger UI to upload the frame).*
+
+### Method 2: Streaming via `/stream` with a Local RTSP Server
+
+1. **Start a local RTSP server from your video:**
+   Use FFmpeg to create a continuous stream on your PC:
+   ```bash
+   ffmpeg -re -stream_loop -1 -i "C:\path\to\your\video.mp4" -c copy -f rtsp rtsp://localhost:8554/live
+   ```
+
+2. **Expose the stream to AWS:**
+   If AWS cannot connect directly to your PC, you will need to establish a tunnel (e.g., using ngrok, Cloudflare Tunnel) or set up the RTSP server directly in AWS (e.g. upload your video to S3, run an EC2 instance with MediaMTX/FFmpeg, and use its internal IP in ECS).
+
+3. **Configure AWS to read your stream:**
+   Update the `rtsp_url` configuration variable in your ECS task definition or `config.yaml` to point to your public RTSP URL.
+
+4. **Watch the results:**
+   Open `tools/sse_viewer.html` locally and set the API URL to `http://YOUR-AWS-URL/stream`.

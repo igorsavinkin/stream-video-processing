@@ -106,6 +106,14 @@ Backlog organized in 3 iterations. Each item lists target files to change.
     - Priority: P2
     - Estimate: 1-2d
     - Files: `src/model/infer.py`, `src/api/app.py`
+    - Recommended Architecture:
+      - Model Registry (MLflow): store model versions.
+      - Variant Router: select variants by header/percentage.
+      - Feedback Collector: collect feedback via `/feedback` to Kafka/Kinesis.
+      - Winner Selector: analyze metrics and select the best variant.
+      - CT Pipeline: auto-retrain on positive feedback.
     - Checklist:
-      - [ ] Route by header or percentage
+      - [ ] Support multiple model variants per request (e.g. data augmentation, varying top-k)
+      - [ ] Route by header or percentage in `/stream`
+      - [ ] Add `/feedback` endpoint to select the best variant
       - [ ] Rollback on errors
