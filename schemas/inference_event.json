@@ -4,7 +4,12 @@
   "title": "Inference Event Schema",
   "description": "Schema for ML inference metadata events sent to Kafka/Kinesis",
   "type": "object",
-  "required": ["timestamp", "topk", "source", "latency_ms"],
+  "required": [
+    "timestamp",
+    "topk",
+    "source",
+    "latency_ms"
+  ],
   "properties": {
     "timestamp": {
       "type": "number",
@@ -17,7 +22,10 @@
       "minItems": 0,
       "items": {
         "type": "object",
-        "required": ["label", "score"],
+        "required": [
+          "label",
+          "score"
+        ],
         "properties": {
           "label": {
             "type": "string",
@@ -52,7 +60,10 @@
       "description": "Device used for inference (e.g., 'cpu', 'cuda:0', 'mps')"
     },
     "has_person": {
-      "type": "boolean",
+      "type": [
+        "boolean",
+        "null"
+      ],
       "description": "Whether a person was detected (only for person_detector model)"
     },
     "request_id": {
