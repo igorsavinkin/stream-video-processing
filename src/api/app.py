@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 
 import cv2
+from src.api.auth import AuthRateLimitMiddleware
 from src.config import load_settings
 from src.inference_capture import InferenceCapture
 from src.ingest.metadata_producer import (
@@ -79,6 +80,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Auth + rate limiting middleware
+_api_keys_raw = settings.api_keys.strip()
+_api_keys_set = {k.strip() for k in _api_keys_raw.split(",") if k.strip()} if _api_keys_raw else None
+app.add_middleware(
+    AuthRateLimitMiddleware,
+    api_keys=_api_keys_set,
+    rate_limit_predict=settings.rate_limit_predict,
+    rate_limit_stream=settings.rate_limit_stream,
+    rate_limit_default=settings.rate_limit_default,
+)
+
 metrics = Metrics(
     log_every=settings.metrics_log_every,
     dimensions={

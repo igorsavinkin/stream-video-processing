@@ -39,3 +39,65 @@ variable "vpc_id" {
 variable "subnet_ids" {
   type = list(string)
 }
+
+# ---------------------------------------------------------------------------
+# Autoscaling
+# ---------------------------------------------------------------------------
+
+variable "autoscaling_min_capacity" {
+  description = "Minimum number of ECS tasks"
+  type        = number
+  default     = 1
+}
+
+variable "autoscaling_max_capacity" {
+  description = "Maximum number of ECS tasks"
+  type        = number
+  default     = 4
+}
+
+variable "cpu_target_percent" {
+  description = "Target CPU utilisation (%) for autoscaling"
+  type        = number
+  default     = 70
+}
+
+variable "memory_target_percent" {
+  description = "Target memory utilisation (%) for autoscaling"
+  type        = number
+  default     = 75
+}
+
+variable "scale_in_cooldown" {
+  description = "Cooldown (seconds) before scaling in"
+  type        = number
+  default     = 300
+}
+
+variable "scale_out_cooldown" {
+  description = "Cooldown (seconds) before scaling out"
+  type        = number
+  default     = 60
+}
+
+# ---------------------------------------------------------------------------
+# CPU / RAM guardrail alarms
+# ---------------------------------------------------------------------------
+
+variable "cpu_alarm_threshold" {
+  description = "CPU % threshold for CloudWatch alarm"
+  type        = number
+  default     = 85
+}
+
+variable "memory_alarm_threshold" {
+  description = "Memory % threshold for CloudWatch alarm"
+  type        = number
+  default     = 85
+}
+
+variable "alarm_sns_topic_arn" {
+  description = "SNS topic ARN for alarm notifications (empty = no notifications)"
+  type        = string
+  default     = ""
+}
