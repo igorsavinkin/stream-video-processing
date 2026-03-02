@@ -66,7 +66,12 @@ class RTSPFrameReader:
             return self._open_capture_auto(preferred_name=self.camera_name)
         if isinstance(source, str) and source.isdigit():
             source = int(source)
-        if os.name == "nt":
+        is_rtsp = isinstance(source, str) and source.lower().startswith("rtsp://")
+        if is_rtsp:
+            logger.info("camera_open source=%s backend=FFMPEG (RTSP)", source)
+            os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp"
+            cap = cv2.VideoCapture(source, cv2.CAP_FFMPEG)
+        elif os.name == "nt":
             if isinstance(source, int):
                 logger.info("camera_open source=%s backend=MSMF", source)
                 cap = cv2.VideoCapture(source, cv2.CAP_MSMF)

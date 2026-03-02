@@ -134,16 +134,16 @@ def test_stream_endpoint_sse(monkeypatch):
     monkeypatch.setattr(app_module, "predict_bgr", _dummy_predict_bgr)
 
     with TestClient(app_module.app) as client:
-        response = client.get("/stream?max_frames=2", stream=True)
-        events = []
-        for line in response.iter_lines():
-            if not line:
-                continue
-            text = line.decode("utf-8")
-            if text.startswith("data: "):
-                events.append(json.loads(text.replace("data: ", "", 1)))
-            if len(events) >= 2:
-                break
+        with client.stream("GET", "/stream?max_frames=2") as response:
+            events = []
+            for line in response.iter_lines():
+                if not line:
+                    continue
+                text = line if isinstance(line, str) else line.decode("utf-8")
+                if text.startswith("data: "):
+                    events.append(json.loads(text.replace("data: ", "", 1)))
+                if len(events) >= 2:
+                    break
 
     assert len(events) == 2
     assert all("predictions" in event for event in events)

@@ -15,6 +15,11 @@ build/
 *.egg-info/
 coverage.xml
 .pytest_cache/
+.kilocode/
+.kilocodemodes
+.kilocode/
+.kilocodemodes
 design.txt
 interview-presentation.txt
+questions.txtinterview-presentation.txt
 questions.txt

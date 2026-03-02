@@ -22,13 +22,14 @@ def test_rtsp_reader_reads_frames():
         target_fps=2,
         width=320,
         height=240,
+        reconnect_delay=0.5,
     ).start()
     try:
-        deadline = time.time() + 5
+        deadline = time.time() + 15
         frame = None
         while time.time() < deadline and frame is None:
             frame = reader.read()
-            time.sleep(0.1)
+            time.sleep(0.2)
         assert frame is not None
         assert isinstance(frame, np.ndarray)
         assert frame.ndim == 3

@@ -131,25 +131,25 @@ def test_stream_endpoint_with_local_video(sample_video, monkeypatch):
     app_module.model_kind = "classifier"
     
     with TestClient(app_module.app) as client:
-        response = client.get(f"/stream?rtsp_url={sample_video}&max_frames=3", stream=True)
-        assert response.status_code == 200
-        
-        events = []
-        timeout = time.time() + 10  # 10 second timeout
-        for line in response.iter_lines():
-            if time.time() > timeout:
-                break
-            if not line:
-                continue
-            text = line.decode("utf-8") if isinstance(line, bytes) else line
-            if text.startswith("data: "):
-                try:
-                    event = json.loads(text.replace("data: ", "", 1))
-                    events.append(event)
-                    if len(events) >= 3:
-                        break
-                except json.JSONDecodeError:
+        with client.stream("GET", f"/stream?rtsp_url={sample_video}&max_frames=3") as response:
+            assert response.status_code == 200
+            
+            events = []
+            timeout = time.time() + 10  # 10 second timeout
+            for line in response.iter_lines():
+                if time.time() > timeout:
+                    break
+                if not line:
                     continue
+                text = line if isinstance(line, str) else line.decode("utf-8")
+                if text.startswith("data: "):
+                    try:
+                        event = json.loads(text.replace("data: ", "", 1))
+                        events.append(event)
+                        if len(events) >= 3:
+                            break
+                    except json.JSONDecodeError:
+                        continue
         
         assert len(events) >= 2, f"Should receive at least 2 events, got {len(events)}"
         for event in events:
@@ -176,19 +176,19 @@ def test_stream_endpoint_max_frames_limit(sample_video, monkeypatch):
     
     with TestClient(app_module.app) as client:
         max_frames = 2
-        response = client.get(f"/stream?rtsp_url={sample_video}&max_frames={max_frames}", stream=True)
-        assert response.status_code == 200
-        
-        events = []
-        for line in response.iter_lines():
-            if not line:
-                continue
-            text = line.decode("utf-8") if isinstance(line, bytes) else line
-            if text.startswith("data: "):
-                event = json.loads(text.replace("data: ", "", 1))
-                events.append(event)
-                if len(events) >= max_frames + 1:  # Allow one extra to verify it stops
-                    break
+        with client.stream("GET", f"/stream?rtsp_url={sample_video}&max_frames={max_frames}") as response:
+            assert response.status_code == 200
+            
+            events = []
+            for line in response.iter_lines():
+                if not line:
+                    continue
+                text = line if isinstance(line, str) else line.decode("utf-8")
+                if text.startswith("data: "):
+                    event = json.loads(text.replace("data: ", "", 1))
+                    events.append(event)
+                    if len(events) >= max_frames + 1:  # Allow one extra to verify it stops
+                        break
         
         assert len(events) == max_frames, f"Should receive exactly {max_frames} events"
 
@@ -208,16 +208,16 @@ def test_stream_endpoint_sse_format(sample_video, monkeypatch):
     app_module.model_kind = "classifier"
     
     with TestClient(app_module.app) as client:
-        response = client.get(f"/stream?rtsp_url={sample_video}&max_frames=1", stream=True)
-        assert response.status_code == 200
-        assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
-        
-        lines = []
-        for line in response.iter_lines():
-            if line:
-                lines.append(line.decode("utf-8") if isinstance(line, bytes) else line)
-                if len(lines) >= 3:  # Get at least one data line
-                    break
+        with client.stream("GET", f"/stream?rtsp_url={sample_video}&max_frames=1") as response:
+            assert response.status_code == 200
+            assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
+            
+            lines = []
+            for line in response.iter_lines():
+                if line:
+                    lines.append(line if isinstance(line, str) else line.decode("utf-8"))
+                    if len(lines) >= 3:  # Get at least one data line
+                        break
         
         # Should have at least one "data: " line
         data_lines = [l for l in lines if l.startswith("data: ")]
@@ -288,19 +288,19 @@ def test_stream_with_person_detector(sample_video, monkeypatch):
     app_module.model_kind = "detector"
     
     with TestClient(app_module.app) as client:
-        response = client.get(f"/stream?rtsp_url={sample_video}&max_frames=2", stream=True)
-        assert response.status_code == 200
-        
-        events = []
-        for line in response.iter_lines():
-            if not line:
-                continue
-            text = line.decode("utf-8") if isinstance(line, bytes) else line
-            if text.startswith("data: "):
-                event = json.loads(text.replace("data: ", "", 1))
-                events.append(event)
-                if len(events) >= 2:
-                    break
+        with client.stream("GET", f"/stream?rtsp_url={sample_video}&max_frames=2") as response:
+            assert response.status_code == 200
+            
+            events = []
+            for line in response.iter_lines():
+                if not line:
+                    continue
+                text = line if isinstance(line, str) else line.decode("utf-8")
+                if text.startswith("data: "):
+                    event = json.loads(text.replace("data: ", "", 1))
+                    events.append(event)
+                    if len(events) >= 2:
+                        break
         
         assert len(events) >= 1
         for event in events:
