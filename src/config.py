@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     frame_sample_fps: int = 2
     frame_width: int = 640
     frame_height: int = 360
-    model_name: str = "mobilenet_v3_small"
+    model_name: str = "resnet50"
     device: str = "cpu"
     metrics_log_every: int = 50
     save_processed: bool = False

@@ -191,3 +191,90 @@ def test_predict_different_image_sizes(mobilenet_settings):
         )
         assert len(results) == 3
         assert all("label" in r and "score" in r for r in results)
+
+
+# --- Tests for additional classifier models ---
+
+
+@pytest.fixture
+def resnet50_settings():
+    """Settings for ResNet-50 model."""
+    return Settings(
+        model_name="resnet50",
+        device="cpu",
+        class_topk=5,
+    )
+
+
+@pytest.fixture
+def efficientnet_settings():
+    """Settings for EfficientNet-B0 model."""
+    return Settings(
+        model_name="efficientnet_b0",
+        device="cpu",
+        class_topk=5,
+    )
+
+
+def test_load_model_resnet50(resnet50_settings):
+    """Smoke test: Load ResNet-50 model."""
+    model, preprocess, categories, device, model_kind = load_model(resnet50_settings)
+
+    assert model is not None
+    assert preprocess is not None
+    assert len(categories) == 1000  # ImageNet classes
+    assert device.type == "cpu"
+    assert model_kind == "classifier"
+
+
+def test_predict_pil_resnet50(resnet50_settings):
+    """Smoke test: Run inference with ResNet-50 on PIL image."""
+    model, preprocess, categories, device, model_kind = load_model(resnet50_settings)
+    image = _create_test_image()
+
+    results = predict_pil(
+        model, preprocess, categories, device, image,
+        topk=5, model_kind=model_kind,
+    )
+
+    assert isinstance(results, list)
+    assert len(results) == 5
+    assert all("label" in r and "score" in r for r in results)
+    assert all(0.0 <= r["score"] <= 1.0 for r in results)
+
+
+def test_load_model_efficientnet(efficientnet_settings):
+    """Smoke test: Load EfficientNet-B0 model."""
+    model, preprocess, categories, device, model_kind = load_model(efficientnet_settings)
+
+    assert model is not None
+    assert preprocess is not None
+    assert len(categories) == 1000
+    assert device.type == "cpu"
+    assert model_kind == "classifier"
+
+
+def test_predict_pil_efficientnet(efficientnet_settings):
+    """Smoke test: Run inference with EfficientNet-B0 on PIL image."""
+    model, preprocess, categories, device, model_kind = load_model(efficientnet_settings)
+    image = _create_test_image()
+
+    results = predict_pil(
+        model, preprocess, categories, device, image,
+        topk=5, model_kind=model_kind,
+    )
+
+    assert isinstance(results, list)
+    assert len(results) == 5
+    assert all("label" in r and "score" in r for r in results)
+    assert all(0.0 <= r["score"] <= 1.0 for r in results)
+
+
+def test_load_model_unknown_falls_back_to_resnet50():
+    """Unknown model_name should fall back to resnet50."""
+    settings = Settings(model_name="nonexistent_model", device="cpu")
+    model, preprocess, categories, device, model_kind = load_model(settings)
+
+    assert model is not None
+    assert len(categories) == 1000
+    assert model_kind == "classifier"
