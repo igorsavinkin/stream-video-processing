@@ -40,6 +40,11 @@ class Settings(BaseSettings):
     kinesis_region: str = "us-east-1"
     streaming_max_retries: int = 3
     streaming_retry_backoff_ms: int = 100
+    # Auth & rate limiting
+    api_keys: str = ""  # comma-separated list of valid API keys; empty = auth disabled
+    rate_limit_predict: str = "30/minute"  # rate limit for /predict
+    rate_limit_stream: str = "10/minute"   # rate limit for /stream
+    rate_limit_default: str = "60/minute"  # rate limit for other endpoints
 
     model_config = SettingsConfigDict(
         env_prefix="APP_",
@@ -77,6 +82,11 @@ class YamlSettings(BaseModel):
     kinesis_region: Optional[str] = None
     streaming_max_retries: Optional[int] = None
     streaming_retry_backoff_ms: Optional[int] = None
+    # Auth & rate limiting
+    api_keys: Optional[str] = None
+    rate_limit_predict: Optional[str] = None
+    rate_limit_stream: Optional[str] = None
+    rate_limit_default: Optional[str] = None
 
     model_config = {
         "protected_namespaces": (),

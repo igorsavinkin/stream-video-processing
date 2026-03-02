@@ -36,3 +36,11 @@ kafka_topic: inference-events
 # Retry configuration
 streaming_max_retries: 3
 streaming_retry_backoff_ms: 100
+
+# Auth & rate limiting
+# Comma-separated API keys; leave empty to disable auth
+#api_keys: "key-abc-123,key-def-456"
+# Rate limits per endpoint (format: "<count>/<second|minute|hour>")
+rate_limit_predict: "30/minute"
+rate_limit_stream: "10/minute"
+rate_limit_default: "60/minute"
