@@ -1,15 +1,38 @@
 from __future__ import annotations
 
+import logging
 from typing import List, Tuple
 
 import torch
 from PIL import Image
 from torchvision import models
-from torchvision.models import MobileNet_V3_Small_Weights
+from torchvision.models import (
+    EfficientNet_B0_Weights,
+    MobileNet_V3_Small_Weights,
+    ResNet50_Weights,
+)
 from torchvision.models.detection import FasterRCNN_ResNet50_FPN_Weights
 
 from src.config import Settings
 from src.preprocess.transforms import to_pil
+
+logger = logging.getLogger(__name__)
+
+# Supported classifier models and their loaders
+_CLASSIFIER_REGISTRY: dict[str, tuple] = {
+    "resnet50": (
+        lambda: models.resnet50(weights=ResNet50_Weights.DEFAULT),
+        ResNet50_Weights.DEFAULT,
+    ),
+    "efficientnet_b0": (
+        lambda: models.efficientnet_b0(weights=EfficientNet_B0_Weights.DEFAULT),
+        EfficientNet_B0_Weights.DEFAULT,
+    ),
+    "mobilenet_v3_small": (
+        lambda: models.mobilenet_v3_small(weights=MobileNet_V3_Small_Weights.DEFAULT),
+        MobileNet_V3_Small_Weights.DEFAULT,
+    ),
+}
 
 
 def load_model(
@@ -22,9 +45,26 @@ def load_model(
         categories = list(weights.meta.get("categories", []))
         preprocess = weights.transforms()
         model_kind = "detector"
+    elif settings.model_name in _CLASSIFIER_REGISTRY:
+        model_factory, weights = _CLASSIFIER_REGISTRY[settings.model_name]
+        model = model_factory()
+        categories = list(weights.meta.get("categories", []))
+        preprocess = weights.transforms()
+        model_kind = "classifier"
+        logger.info(
+            "Loaded classifier model=%s  categories=%d  top1_acc=%.1f%%",
+            settings.model_name,
+            len(categories),
+            weights.meta.get("_metrics", {}).get("ImageNet-1K", {}).get("acc@1", 0),
+        )
     else:
-        weights = MobileNet_V3_Small_Weights.DEFAULT
-        model = models.mobilenet_v3_small(weights=weights)
+        # Fallback: treat unknown name as mobilenet_v3_small for backward compat
+        logger.warning(
+            "Unknown model_name=%s, falling back to resnet50",
+            settings.model_name,
+        )
+        weights = ResNet50_Weights.DEFAULT
+        model = models.resnet50(weights=weights)
         categories = list(weights.meta.get("categories", []))
         preprocess = weights.transforms()
         model_kind = "classifier"
