@@ -339,6 +339,14 @@ def stream(
                     person_score_threshold=settings.person_score_threshold,
                     detection_threshold=settings.detection_threshold,
                 )
+                # Determine if a person is detected (only for detector models)
+                has_person = None
+                if model_kind in ("detector", "coco_detector"):
+                    has_person = any(
+                        item.get("label") == "person"
+                        and item.get("score", 0) >= settings.person_score_threshold
+                        for item in preds
+                    )
                 inference_latency = time.perf_counter() - inference_start
                 metrics.record(inference_latency)
 

@@ -44,7 +44,7 @@ def load_model(
         model = models.detection.fasterrcnn_resnet50_fpn(weights=weights)
         categories = list(weights.meta.get("categories", []))
         preprocess = weights.transforms()
-        model_kind = "person_detector"
+        model_kind = "detector"
     elif settings.model_name == "coco_detector":
         weights = FasterRCNN_ResNet50_FPN_Weights.DEFAULT
         model = models.detection.fasterrcnn_resnet50_fpn(weights=weights)

@@ -19,6 +19,7 @@ def _dummy_predict_pil(
     _topk,
     model_kind="classifier",
     person_score_threshold=0.6,
+    detection_threshold=0.3,
 ):
     return [{"label": "class_a", "score": 0.99}]
 
