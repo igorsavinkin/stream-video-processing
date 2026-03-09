@@ -242,11 +242,12 @@ async def predict(request: Request, file: UploadFile = File(...)) -> dict:
             settings.class_topk,
             model_kind=model_kind,
             person_score_threshold=settings.person_score_threshold,
+            detection_threshold=settings.detection_threshold,
         )
         inference_latency = time.perf_counter() - inference_start
         metrics.record(inference_latency)
         has_person = None
-        if model_kind == "detector":
+        if model_kind in ("detector", "coco_detector"):
             has_person = any(
                 item.get("label") == "person"
                 and item.get("score", 0) >= settings.person_score_threshold
@@ -336,16 +337,11 @@ def stream(
                     settings.class_topk,
                     model_kind=model_kind,
                     person_score_threshold=settings.person_score_threshold,
+                    detection_threshold=settings.detection_threshold,
                 )
                 inference_latency = time.perf_counter() - inference_start
                 metrics.record(inference_latency)
-                has_person = None
-                if model_kind == "detector":
-                    has_person = any(
-                        item.get("label") == "person"
-                        and item.get("score", 0) >= settings.person_score_threshold
-                        for item in preds
-                    )
+
                 payload = {
                     "timestamp": time.time(),
                     "predictions": preds,

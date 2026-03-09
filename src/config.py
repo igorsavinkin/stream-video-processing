@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     processed_dir: str = "data/processed"
     class_topk: int = 5
     person_score_threshold: float = 0.6
+    detection_threshold: float = 0.5
     camera_name: Optional[str] = None
     config_path: Optional[str] = None
     log_level: str = "INFO"
@@ -66,6 +67,7 @@ class YamlSettings(BaseModel):
     processed_dir: Optional[str] = None
     class_topk: Optional[int] = None
     person_score_threshold: Optional[float] = None
+    detection_threshold: Optional[float] = None
     camera_name: Optional[str] = None
     log_level: Optional[str] = None
     capture_inference: Optional[bool] = None

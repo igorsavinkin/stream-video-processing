@@ -4,6 +4,7 @@
 #rtsp_url: C:/Users/igors/Videos/WST/WST-graduation-Video-2025-12-31.mp4
 #rtsp_url: rtsp://wowzaec2demo.streamlock.net/vod/mp4:BigBuckBunny_115k.mov
 #rtsp_url: rtsp://localhost:8554/live
+#rtsp_url: rtsp://host.docker.internal:8554/live  # For Docker containers
 frame_sample_fps: 2
 frame_width: 640
 frame_height: 360
@@ -14,16 +15,19 @@ frame_height: 360
 #   mobilenet_v3_small - fastest but weakest (~67.7% top-1), ~2.5M params
 # Detector models:
 #   person_detector    - Faster R-CNN, person/no_person only
+#   coco_detector      - COCO detector (80 classes), requires detection_threshold
 model_name: resnet50
 #model_name: efficientnet_b0
 #model_name: mobilenet_v3_small
 #model_name: person_detector
+#model_name: coco_detector
 device: cpu
 metrics_log_every: 50
 save_processed: false
 processed_dir: data/processed
 class_topk: 5
 person_score_threshold: 0.6
+# detection_threshold: 0.5  # For coco_detector model only
 log_level: INFO
 capture_inference: false
 capture_dir: data/inference

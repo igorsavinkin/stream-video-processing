@@ -44,7 +44,13 @@ def load_model(
         model = models.detection.fasterrcnn_resnet50_fpn(weights=weights)
         categories = list(weights.meta.get("categories", []))
         preprocess = weights.transforms()
-        model_kind = "detector"
+        model_kind = "person_detector"
+    elif settings.model_name == "coco_detector":
+        weights = FasterRCNN_ResNet50_FPN_Weights.DEFAULT
+        model = models.detection.fasterrcnn_resnet50_fpn(weights=weights)
+        categories = list(weights.meta.get("categories", []))
+        preprocess = weights.transforms()
+        model_kind = "coco_detector"
     elif settings.model_name in _CLASSIFIER_REGISTRY:
         model_factory, weights = _CLASSIFIER_REGISTRY[settings.model_name]
         model = model_factory()
@@ -83,6 +89,7 @@ def predict_bgr(
     topk: int = 5,
     model_kind: str = "classifier",
     person_score_threshold: float = 0.6,
+    detection_threshold: float = 0.3,
 ) -> List[dict]:
     image = to_pil(frame_bgr)
     return predict_pil(
@@ -94,6 +101,7 @@ def predict_bgr(
         topk=topk,
         model_kind=model_kind,
         person_score_threshold=person_score_threshold,
+        detection_threshold=detection_threshold,
     )
 
 
@@ -107,7 +115,34 @@ def predict_pil(
     topk: int = 5,
     model_kind: str = "classifier",
     person_score_threshold: float = 0.6,
+    detection_threshold: float = 0.3,
 ) -> List[dict]:
+    # COCO detector: returns all detected objects above threshold
+    if model_kind == "coco_detector":
+        input_tensor = preprocess(image).to(device)
+        outputs = model([input_tensor])[0]
+        scores = outputs.get("scores", torch.tensor([]))
+        labels = outputs.get("labels", torch.tensor([]))
+        
+        results: List[dict] = []
+        seen_labels = set()
+        for score, label_idx in zip(scores.tolist(), labels.tolist()):
+            if score < detection_threshold:
+                continue
+            label = categories[label_idx] if label_idx < len(categories) else f"class_{label_idx}"
+            # Deduplicate by label, keep highest score
+            if label not in seen_labels:
+                seen_labels.add(label)
+                results.append({"label": label, "score": round(score, 6)})
+        
+        # Sort by score descending
+        results.sort(key=lambda x: x["score"], reverse=True)
+        # Limit to topk
+        if topk > 0:
+            results = results[:topk]
+        return results if results else [{"label": "no_objects", "score": 1.0}]
+    
+    # Person detector (legacy): only person/no_person
     if model_kind == "detector":
         input_tensor = preprocess(image).to(device)
         outputs = model([input_tensor])[0]
