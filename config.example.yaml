@@ -56,3 +56,45 @@ streaming_retry_backoff_ms: 100
 rate_limit_predict: "30/minute"
 rate_limit_stream: "10/minute"
 rate_limit_default: "60/minute"
+
+# Kafka Consumer (for Parquet pipeline)
+# Enable/disable the Kafka consumer service
+kafka_consumer_enabled: false
+# Consumer group ID for offset tracking
+kafka_consumer_group_id: kafka-to-parquet-group
+# Maximum number of records to fetch in a single poll
+kafka_consumer_max_poll_records: 100
+# What to do when there is no initial offset: earliest, latest, none
+kafka_consumer_auto_offset_reset: earliest
+# Whether to auto-commit offsets (recommended: false for at-least-once)
+kafka_consumer_enable_auto_commit: false
+# Session timeout for consumer group
+kafka_consumer_session_timeout_ms: 45000
+# Heartbeat interval for consumer group
+kafka_consumer_heartbeat_interval_ms: 3000
+# Maximum time between polls before consumer is considered dead
+kafka_consumer_max_poll_interval_ms: 300000
+
+# Parquet Writer (S3 storage)
+# S3 bucket for storing Parquet files (required)
+parquet_s3_bucket: ""
+# AWS region for S3 bucket
+parquet_s3_region: us-east-1
+# S3 prefix (folder path) for Parquet files
+parquet_s3_prefix: inference-events/parquet
+# Number of events to accumulate before writing a Parquet file
+parquet_batch_size: 1000
+# Maximum time (seconds) to wait before flushing a batch
+parquet_flush_interval_seconds: 60
+# Compression algorithm: snappy, gzip, lz4, zstd, none
+parquet_compression: snappy
+# Maximum file size in MB before splitting
+parquet_max_file_size_mb: 128
+# Enable multipart upload for large files
+parquet_enable_s3_multipart: true
+# Path for storing events that failed processing
+parquet_dead_letter_queue_path: data/dead_letter_queue.jsonl
+# Partition columns for Hive-style partitioning (comma-separated)
+parquet_partition_columns: year,month,day
+# Interval in seconds for logging metrics (JSON format)
+parquet_metrics_log_every: 60

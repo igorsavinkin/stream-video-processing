@@ -47,6 +47,29 @@ class Settings(BaseSettings):
     rate_limit_stream: str = "10/minute"   # rate limit for /stream
     rate_limit_default: str = "60/minute"  # rate limit for other endpoints
 
+    # Kafka to Parquet consumer settings
+    kafka_consumer_enabled: bool = False
+    kafka_consumer_group_id: str = "inference-parquet-consumer"
+    kafka_consumer_auto_offset_reset: str = "earliest"
+    kafka_consumer_max_poll_records: int = 100
+    kafka_consumer_session_timeout_ms: int = 45000
+    kafka_consumer_heartbeat_interval_ms: int = 3000
+    kafka_consumer_max_poll_interval_ms: int = 300000
+    kafka_consumer_log_level: str = "INFO"
+
+    # Parquet writer settings
+    parquet_s3_bucket: Optional[str] = None
+    parquet_s3_prefix: str = "inference-parquet"
+    parquet_batch_size: int = 1000
+    parquet_flush_interval_seconds: int = 60
+    parquet_compression: str = "snappy"
+    parquet_partition_columns: str = "year,month,day"  # comma-separated
+    parquet_max_file_size_mb: int = 128
+    parquet_enable_s3_multipart: bool = True
+    parquet_s3_region: Optional[str] = None
+    parquet_dead_letter_queue_path: Optional[str] = None
+    parquet_metrics_log_every: int = 60  # seconds between metrics logs
+
     model_config = SettingsConfigDict(
         env_prefix="APP_",
         env_file=".env",
@@ -89,6 +112,29 @@ class YamlSettings(BaseModel):
     rate_limit_predict: Optional[str] = None
     rate_limit_stream: Optional[str] = None
     rate_limit_default: Optional[str] = None
+
+    # Kafka to Parquet consumer settings
+    kafka_consumer_enabled: Optional[bool] = None
+    kafka_consumer_group_id: Optional[str] = None
+    kafka_consumer_auto_offset_reset: Optional[str] = None
+    kafka_consumer_max_poll_records: Optional[int] = None
+    kafka_consumer_session_timeout_ms: Optional[int] = None
+    kafka_consumer_heartbeat_interval_ms: Optional[int] = None
+    kafka_consumer_max_poll_interval_ms: Optional[int] = None
+    kafka_consumer_log_level: Optional[str] = None
+
+    # Parquet writer settings
+    parquet_s3_bucket: Optional[str] = None
+    parquet_s3_prefix: Optional[str] = None
+    parquet_batch_size: Optional[int] = None
+    parquet_flush_interval_seconds: Optional[int] = None
+    parquet_compression: Optional[str] = None
+    parquet_partition_columns: Optional[str] = None
+    parquet_max_file_size_mb: Optional[int] = None
+    parquet_enable_s3_multipart: Optional[bool] = None
+    parquet_s3_region: Optional[str] = None
+    parquet_dead_letter_queue_path: Optional[str] = None
+    parquet_metrics_log_every: Optional[int] = None
 
     model_config = {
         "protected_namespaces": (),

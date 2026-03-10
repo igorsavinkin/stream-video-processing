@@ -304,3 +304,89 @@ Environment variables:
 Captured data layout:
 - `YYYY/MM/DD/<timestamp>_<uuid>.jpg`
 - `YYYY/MM/DD/<timestamp>_<uuid>.json`
+
+## Kafka to Parquet Pipeline
+
+Stream inference metadata from Kafka to S3 in Parquet format for efficient analytics.
+
+### Overview
+The pipeline consumes inference events from Kafka, validates them against a JSON schema, batches them, and writes to S3 as partitioned Parquet files with Hive-style partitioning (year/month/day). This enables cost-effective storage and fast querying for downstream analytics.
+```
+           +------------------+
+           |  Inference API   |
+           +--------+---------+
+                    |
+                    v
+              Kafka Topic
+            inference-events
+                    |
+                    v
+        +-----------------------+
+        | Data Lake Writer      |
+        | Kafka → Parquet → S3  |
+        +-----------+-----------+
+                    |
+                    v
+               S3 Data Lake
+
+### Quick Start
+1. Ensure Kafka is running and producing inference events (see `src/ingest/metadata_producer.py`).
+2. Configure the consumer in `config.yaml`:
+   ```yaml
+   kafka_consumer:
+     enabled: true
+     bootstrap_servers: localhost:9092
+     topic: inference-events
+     group_id: parquet-writer
+     auto_offset_reset: earliest
+   
+   parquet_writer:
+     s3_bucket: your-analytics-bucket
+     s3_prefix: inference-events
+     batch_size: 1000
+     flush_interval_seconds: 300
+   ```
+3. Run the pipeline:
+   ```bash
+   python run_kafka_to_parquet.py
+   ```
+
+### Features
+- **Schema validation**: Ensures data quality using JSON schema
+- **Batch processing**: Configurable size‑ and time‑based flushing
+- **Hive partitioning**: Automatic partitioning by event timestamp
+- **Multipart S3 upload**: Reliable upload of large Parquet files
+- **Graceful shutdown**: Handles SIGINT/SIGTERM for clean termination
+- **Metrics integration**: Emits JSON‑formatted statistics for monitoring
+- **Error resilience**: Retry logic for transient S3/Kafka failures
+
+### Configuration
+See `config.example.yaml` for all available options, including:
+- Kafka consumer settings (SSL, SASL, etc.)
+- Parquet writer settings (compression, row group size)
+- S3 upload parameters (multipart thresholds, retries)
+- Metrics and logging configuration
+
+### Monitoring
+The pipeline emits periodic statistics in JSON format:
+```json
+{
+  "timestamp": "2025-01-15T12:34:56.789Z",
+  "component": "kafka_to_parquet",
+  "metrics": {
+    "events_consumed": 1234,
+    "batches_written": 5,
+    "bytes_written": 1048576,
+    "errors": 0
+  }
+}
+```
+
+### Testing
+Run the unit tests:
+```bash
+pytest tests/test_kafka_to_parquet.py -v
+```
+
+### Detailed Documentation
+For architecture diagrams, deployment guides, and operational notes, see [KAFKA_TO_PARQUET.md](KAFKA_TO_PARQUET.md).
