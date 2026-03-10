@@ -77,7 +77,7 @@ kafka_consumer_max_poll_interval_ms: 300000
 
 # Parquet Writer (S3 storage)
 # S3 bucket for storing Parquet files (required)
-parquet_s3_bucket: ""
+parquet_s3_bucket: "ml-platform-data-lake"
 # AWS region for S3 bucket
 parquet_s3_region: us-east-1
 # S3 prefix (folder path) for Parquet files

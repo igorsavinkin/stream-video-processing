@@ -24,3 +24,7 @@ interview-presentation.txt
 questions.txtinterview-presentation.txt
 questions.txt
 config.yaml
+*.jpg
+*.jpeg
+*.png
+*.gif
