@@ -328,6 +328,8 @@ The pipeline consumes inference events from Kafka, validates them against a JSON
                     |
                     v
                S3 Data Lake
+```
+The pipeline is designed for high throughput with configurable batch sizes and flush intervals.
 
 ### Quick Start
 1. Ensure Kafka is running and producing inference events (see `src/ingest/metadata_producer.py`).

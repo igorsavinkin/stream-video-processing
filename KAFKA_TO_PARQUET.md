@@ -1,10 +1,10 @@
 # Kafka to Parquet Pipeline
 
-## Обзор
+## Overview
 
-Модуль `kafka_to_parquet` реализует конвейер для потребления событий вывода (inference events) из Apache Kafka, их обработки и сохранения в формате Parquet в Amazon S3. Это позволяет архивировать данные вывода для последующего анализа, обучения моделей и мониторинга дрейфа.
+The `kafka_to_parquet` module implements a pipeline for consuming inference events from Apache Kafka, processing them, and saving them in Parquet format to Amazon S3. This enables archiving inference data for subsequent analysis, model training, and drift monitoring.
 
-## Архитектура
+## Architecture
 
 ```mermaid
 graph TD
@@ -19,46 +19,46 @@ graph TD
     H --> E
 ```
 
-### Компоненты
+### Components
 
 1. **Kafka Consumer** (`kafka_consumer.py`)
-   - Потребляет события из топика Kafka
-   - Поддерживает управление состоянием (IDLE, POLLING, PROCESSING, STOPPING, ERROR)
-   - Обрабатывает сообщения батчами для эффективности
-   - Включает обработку ошибок и повторные попытки
+   - Consumes events from Kafka topic
+   - Supports state management (IDLE, POLLING, PROCESSING, STOPPING, ERROR)
+   - Processes messages in batches for efficiency
+   - Includes error handling and retries
 
 2. **Event Processor** (`kafka_consumer.py`)
-   - Валидирует и обогащает события
-   - Извлекает поля даты (год, месяц, день) для партиционирования
-   - "Расплющивает" предсказания top-k в отдельные колонки
-   - Добавляет метаданные обработки
+   - Validates and enriches events
+   - Extracts date fields (year, month, day) for partitioning
+   - Flattens top-k predictions into separate columns
+   - Adds processing metadata
 
 3. **Batch Manager** (`kafka_consumer.py`)
-   - Управляет батчами событий
-   - Срабатывает по размеру батча или временному интервалу
-   - Вызывает callback для обработки готовых батчей
-   - Обрабатывает ошибки через error callback
+   - Manages event batches
+   - Triggers based on batch size or time interval
+   - Calls callback for processing ready batches
+   - Handles errors through error callback
 
 4. **Parquet Writer** (`parquet_writer.py`)
-   - Создает схему Parquet на основе структуры событий
-   - Конвертирует батчи событий в таблицы PyArrow
-   - Записывает Parquet файлы во временное хранилище
-   - Загружает файлы в S3 с поддержкой multipart upload
+   - Creates Parquet schema based on event structure
+   - Converts event batches to PyArrow tables
+   - Writes Parquet files to temporary storage
+   - Uploads files to S3 with multipart upload support
 
 5. **S3 Uploader** (`parquet_writer.py`)
-   - Генерирует S3 ключи с Hive-style партиционированием
-   - Загружает файлы в S3 с экспоненциальной backoff стратегией
-   - Поддерживает multipart upload для больших файлов
-   - Удаляет временные файлы после успешной загрузки
+   - Generates S3 keys with Hive-style partitioning
+   - Uploads files to S3 with exponential backoff strategy
+   - Supports multipart upload for large files
+   - Deletes temporary files after successful upload
 
 6. **Metrics Integration** (`metrics_integration.py`)
-   - Собирает метрики потребления и записи
-   - Логирует метрики в JSON формате для интеграции с существующей системой мониторинга
-   - Поддерживает периодическое логирование
+   - Collects consumption and write metrics
+   - Logs metrics in JSON format for integration with existing monitoring system
+   - Supports periodic logging
 
-## Конфигурация
+## Configuration
 
-### Параметры Kafka Consumer
+### Kafka Consumer Parameters
 
 ```yaml
 kafka:
@@ -75,7 +75,7 @@ kafka:
     max_poll_interval_ms: 300000
 ```
 
-### Параметры Parquet Writer
+### Parquet Writer Parameters
 
 ```yaml
 parquet:
@@ -91,42 +91,42 @@ parquet:
   metrics_log_every: 60
 ```
 
-### Полный пример конфигурации
+### Complete Configuration Example
 
-Смотрите `config.example.yaml` для полного примера со всеми параметрами и комментариями.
+See `config.example.yaml` for a complete example with all parameters and comments.
 
-## Установка и запуск
+## Installation and Startup
 
-### 1. Установка зависимостей
+### 1. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Требуемые зависимости:
+Required dependencies:
 - `kafka-python>=2.0.2`
 - `pyarrow>=17.0.0`
 - `boto3>=1.34.0`
 - `pydantic>=2.0.0`
 
-### 2. Настройка конфигурации
+### 2. Configure Settings
 
-Скопируйте пример конфигурации и настройте под ваше окружение:
+Copy the example configuration and customize for your environment:
 
 ```bash
 cp config.example.yaml config.yaml
-# Отредактируйте config.yaml
+# Edit config.yaml
 ```
 
-### 3. Запуск конвейера
+### 3. Run the Pipeline
 
 ```bash
 python run_kafka_to_parquet.py
 ```
 
-### 4. Запуск как сервис (systemd)
+### 4. Run as a Service (systemd)
 
-Создайте файл сервиса `/etc/systemd/system/kafka-to-parquet.service`:
+Create a service file `/etc/systemd/system/kafka-to-parquet.service`:
 
 ```ini
 [Unit]
@@ -146,21 +146,21 @@ RestartSec=10
 WantedBy=multi-user.target
 ```
 
-## Мониторинг
+## Monitoring
 
-### Метрики
+### Metrics
 
-Конвейер собирает следующие метрики:
+The pipeline collects the following metrics:
 
-- `consumer_messages_received` - количество полученных сообщений
-- `consumer_messages_processed` - количество успешно обработанных сообщений
-- `consumer_errors` - количество ошибок при обработке
-- `batches_written` - количество записанных батчей
-- `events_written` - количество записанных событий
-- `s3_upload_errors` - количество ошибок загрузки в S3
-- `processing_rate_per_second` - скорость обработки (событий/сек)
+- `consumer_messages_received` - number of messages received
+- `consumer_messages_processed` - number of successfully processed messages
+- `consumer_errors` - number of errors during processing
+- `batches_written` - number of batches written
+- `events_written` - number of events written
+- `s3_upload_errors` - number of S3 upload errors
+- `processing_rate_per_second` - processing speed (events/sec)
 
-Метрики логируются в JSON формате каждые `parquet_metrics_log_every` секунд:
+Metrics are logged in JSON format every `parquet_metrics_log_every` seconds:
 
 ```json
 {
@@ -177,19 +177,19 @@ WantedBy=multi-user.target
 }
 ```
 
-### Логи
+### Logs
 
-Конвейер использует стандартное логирование Python с уровнем INFO. Ключевые события:
+The pipeline uses standard Python logging with INFO level. Key events:
 
-- `INFO` - запуск/остановка, статистика, успешные загрузки
-- `WARNING` - временные ошибки, повторные попытки
-- `ERROR` - критические ошибки, невозможность продолжить работу
+- `INFO` - startup/shutdown, statistics, successful uploads
+- `WARNING` - temporary errors, retries
+- `ERROR` - critical errors, inability to continue
 
-## Структура данных
+## Data Structure
 
-### Входные события (Kafka)
+### Input Events (Kafka)
 
-События должны соответствовать схеме `schemas/inference_event.json`:
+Events must conform to the `schemas/inference_event.json` schema:
 
 ```json
 {
@@ -208,92 +208,92 @@ WantedBy=multi-user.target
 }
 ```
 
-### Выходные данные (Parquet)
+### Output Data (Parquet)
 
-Parquet файлы содержат следующие колонки:
+Parquet files contain the following columns:
 
-| Колонка | Тип | Описание |
-|---------|-----|----------|
-| event_id | string | Уникальный идентификатор события |
-| timestamp | string | Временная метка события (ISO 8601) |
-| model_name | string | Название модели |
-| processing_timestamp | string | Время обработки события |
-| year | int32 | Год из timestamp |
-| month | int32 | Месяц из timestamp |
-| day | int32 | День из timestamp |
-| top1_class_id | int32 | ID класса с наибольшей уверенностью |
-| top1_class_name | string | Название класса с наибольшей уверенностью |
-| top1_confidence | float32 | Уверенность top-1 класса |
-| top2_class_id | int32 | ID второго класса |
-| top2_class_name | string | Название второго класса |
-| top2_confidence | float32 | Уверенность top-2 класса |
-| top3_class_id | int32 | ID третьего класса |
-| top3_class_name | string | Название третьего класса |
-| top3_confidence | float32 | Уверенность top-3 класса |
-| frame_id | int32 | ID кадра |
-| camera_id | string | ID камеры |
-| processing_time_ms | float32 | Время обработки в миллисекундах |
+| Column | Type | Description |
+|---------|------|-------------|
+| event_id | string | Unique event identifier |
+| timestamp | string | Event timestamp (ISO 8601) |
+| model_name | string | Model name |
+| processing_timestamp | string | Event processing time |
+| year | int32 | Year from timestamp |
+| month | int32 | Month from timestamp |
+| day | int32 | Day from timestamp |
+| top1_class_id | int32 | Class ID with highest confidence |
+| top1_class_name | string | Class name with highest confidence |
+| top1_confidence | float32 | Top-1 class confidence |
+| top2_class_id | int32 | Second class ID |
+| top2_class_name | string | Second class name |
+| top2_confidence | float32 | Top-2 class confidence |
+| top3_class_id | int32 | Third class ID |
+| top3_class_name | string | Third class name |
+| top3_confidence | float32 | Top-3 class confidence |
+| frame_id | int32 | Frame ID |
+| camera_id | string | Camera ID |
+| processing_time_ms | float32 | Processing time in milliseconds |
 
-### Партиционирование
+### Partitioning
 
-Данные партиционируются в S3 по схеме Hive-style:
+Data is partitioned in S3 using Hive-style scheme:
 
 ```
 s3://bucket/prefix/year=2025/month=01/day=01/events_20250101_120000.parquet
 ```
 
-Партиционирование настраивается через `parquet_partition_columns`. По умолчанию: `["year", "month", "day"]`.
+Partitioning is configured via `parquet_partition_columns`. Default: `["year", "month", "day"]`.
 
-## Обработка ошибок
+## Error Handling
 
-### Повторные попытки S3 Upload
+### S3 Upload Retries
 
-При ошибках загрузки в S3 выполняется до 3 повторных попыток с экспоненциальным backoff:
+On S3 upload errors, up to 3 retry attempts are performed with exponential backoff:
 
-1. Первая попытка: немедленно
-2. Вторая попытка: через 2 секунды
-3. Третья попытка: через 4 секунды
+1. First attempt: immediately
+2. Second attempt: after 2 seconds
+3. Third attempt: after 4 seconds
 
 ### Dead Letter Queue
 
-Некорректные события (не прошедшие валидацию) логируются с уровнем ERROR, но не сохраняются в Parquet. Рассмотрите возможность реализации Dead Letter Queue для таких событий.
+Invalid events (failing validation) are logged with ERROR level but not saved to Parquet. Consider implementing a Dead Letter Queue for such events.
 
 ### Graceful Shutdown
 
-Конвейер обрабатывает сигналы SIGINT и SIGTERM для graceful shutdown:
-1. Останавливает потребление новых сообщений
-2. Завершает обработку текущего батча
-3. Записывает оставшиеся события в Parquet
-4. Закрывает соединения с Kafka и S3
+The pipeline handles SIGINT and SIGTERM signals for graceful shutdown:
+1. Stops consuming new messages
+2. Completes processing of current batch
+3. Writes remaining events to Parquet
+4. Closes Kafka and S3 connections
 
-## Тестирование
+## Testing
 
-### Unit тесты
+### Unit Tests
 
 ```bash
 pytest tests/test_kafka_to_parquet.py -v
 ```
 
-Тесты покрывают:
-- Инициализацию и управление состоянием consumer
-- Обработку событий и извлечение полей
-- Управление батчами (размер и время)
-- Создание схемы Parquet и таблиц
-- Загрузку в S3 с моками
-- Сбор метрик
+Tests cover:
+- Consumer initialization and state management
+- Event processing and field extraction
+- Batch management (size and time)
+- Parquet schema and table creation
+- S3 upload with mocks
+- Metrics collection
 
-### Интеграционные тесты
+### Integration Tests
 
-Для интеграционных тестов требуется:
-1. Запущенный Kafka broker
-2. Доступ к S3 bucket (или мок S3)
-3. Тестовые данные
+Integration tests require:
+1. Running Kafka broker
+2. Access to S3 bucket (or mock S3)
+3. Test data
 
-Пример интеграционного теста см. в `tests/test_stream_integration.py`.
+See `tests/test_stream_integration.py` for an integration test example.
 
-## Производительность
+## Performance
 
-### Настройки для высокой нагрузки
+### High Load Settings
 
 ```yaml
 kafka:
@@ -308,32 +308,32 @@ parquet:
   enable_s3_multipart: true
 ```
 
-### Мониторинг производительности
+### Performance Monitoring
 
-Используйте метрики `processing_rate_per_second` для мониторинга производительности. Типичные значения:
+Use the `processing_rate_per_second` metric to monitor performance. Typical values:
 
-- 100-500 событий/сек: низкая нагрузка
-- 500-2000 событий/сек: средняя нагрузка
-- 2000+ событий/сек: высокая нагрузка
+- 100-500 events/sec: low load
+- 500-2000 events/sec: medium load
+- 2000+ events/sec: high load
 
-## Интеграция с существующей системой
+## Integration with Existing System
 
-### Существующий Kafka Producer
+### Existing Kafka Producer
 
-Конвейер потребляет события, создаваемые `src/ingest/metadata_producer.py`. Убедитесь, что:
-1. Producer отправляет события в тот же топик
-2. События соответствуют схеме `inference_event.json`
-3. Producer использует тот же `bootstrap_servers`
+The pipeline consumes events generated by `src/ingest/metadata_producer.py`. Ensure that:
+1. Producer sends events to the same topic
+2. Events conform to the `inference_event.json` schema
+3. Producer uses the same `bootstrap_servers`
 
-### Существующая система метрик
+### Existing Metrics System
 
-Метрики конвейера интегрированы с существующей системой через JSON логирование. Логи имеют тот же формат, что и `src/metrics.py`.
+Pipeline metrics are integrated with the existing system via JSON logging. Logs follow the same format as `src/metrics.py`.
 
-### Конфигурация
+### Configuration
 
-Конфигурация расширяет существующую систему через `src/config.py`. Все параметры доступны через `Settings` и `YamlSettings` классы.
+Configuration extends the existing system via `src/config.py`. All parameters are accessible through `Settings` and `YamlSettings` classes.
 
-## Развертывание
+## Deployment
 
 ### Docker
 
@@ -351,14 +351,14 @@ CMD ["python", "run_kafka_to_parquet.py"]
 
 ### AWS ECS
 
-Используйте task definition в `infra/ecs-task-def.json` как основу. Добавьте:
-- Переменные окружения для конфигурации
-- IAM роль с доступом к S3
+Use the task definition in `infra/ecs-task-def.json` as a base. Add:
+- Environment variables for configuration
+- IAM role with S3 access
 - Health checks
 
 ### Kubernetes
 
-Пример Deployment:
+Example Deployment:
 
 ```yaml
 apiVersion: apps/v1
@@ -392,60 +392,52 @@ spec:
             cpu: "500m"
 ```
 
-## Устранение неполадок
+## Troubleshooting
 
 ### Common Issues
 
-1. **Consumer не получает сообщения**
-   - Проверьте `bootstrap_servers` и доступность Kafka
-   - Убедитесь, что consumer group_id уникален
-   - Проверьте `auto_offset_reset` (earliest/latest)
+1. **Consumer not receiving messages**
+   - Check `bootstrap_servers` and Kafka availability
+   - Ensure consumer group_id is unique
+   - Check `auto_offset_reset` (earliest/latest)
 
-2. **Ошибки загрузки в S3**
-   - Проверьте IAM permissions
-   - Убедитесь, что bucket существует и доступен
-   - Проверьте регион S3
+2. **S3 upload errors**
+   - Check IAM permissions
+   - Ensure bucket exists and is accessible
+   - Verify S3 region
 
-3. **Высокая задержка обработки**
-   - Увеличьте `max_poll_records`
-   - Уменьшите `flush_interval_seconds`
-   - Проверьте сетевую задержку до S3
+3. **High processing latency**
+   - Increase `max_poll_records`
+   - Decrease `flush_interval_seconds`
+   - Check network latency to S3
 
-4. **Память растет**
-   - Уменьшите `batch_size`
-   - Увеличьте `flush_interval_seconds`
-   - Проверьте утечки памяти в обработке событий
+4. **Memory growing**
+   - Decrease `batch_size`
+   - Increase `flush_interval_seconds`
+   - Check for memory leaks in event processing
 
-### Логи для отладки
+### Debug Logs
 
-Установите уровень логирования DEBUG для детальной отладки:
+Set logging level to DEBUG for detailed debugging:
 
 ```python
 import logging
 logging.getLogger("src.kafka_to_parquet").setLevel(logging.DEBUG)
 ```
 
-## Дальнейшее развитие
+## Future Development
 
-### Планируемые улучшения
+### Planned Improvements
 
-1. **Compaction Parquet файлов** - объединение мелких файлов в более крупные
-2. **Schema evolution** - поддержка эволюции схемы Parquet
-3. **Multiple output formats** - поддержка Avro, ORC
-4. **Streaming to Data Lake** - интеграция с AWS Glue Data Catalog
-5. **Exactly-once semantics** - использование Kafka transactions
+1. **Parquet file compaction** - merging small files into larger ones
+2. **Schema evolution** - support for Parquet schema evolution
+3. **Multiple output formats** - support for Avro, ORC
+4. **Streaming to Data Lake** - integration with AWS Glue Data Catalog
+5. **Exactly-once semantics** - using Kafka transactions
 
-### Контрибьюция
+### Contribution
 
-1. Форкните репозиторий
-2. Создайте feature branch
-3. Реализуйте изменения с тестами
-4. Откройте Pull Request
-
-## Лицензия
-
-Проект использует ту же лицензию, что и основной репозиторий stream-video-processing.
-
-## Контакты
-
-Для вопросов и поддержки обратитесь к команде разработки или создайте issue в репозитории.
+1. Fork the repository
+2. Create a feature branch
+3. Implement changes with tests
+4. Open a Pull Request
