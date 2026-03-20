@@ -1,45 +1,60 @@
-name: Build & Deploy to VPS (with Kafka)
+name: Build & Deploy to VPS (FastAPI + Kafka)
 
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:
+  workflow_dispatch:          # позволяет запустить вручную кнопкой
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Login to GHCR
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_PAT }}
 
-      - name: Build & push api image
+      - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: ./Dockerfile
           push: true
-          tags: ghcr.io/$$   {{ github.repository_owner }}/   $${{ github.event.repository.name }}/stream-ml:latest
+          tags: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}/stream-ml:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Deploy to VPS
+      - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
+          username: ${{ secrets.VPS_USER }}          # должно быть "deploy"
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            set -e
+            echo "🚀 Starting deployment..."
+
             cd /opt/stream-ml
+
+            # Логинимся в GHCR с VPS
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            docker compose pull api          # только api из GHCR
+
+            # Обновляем только api сервис
+            docker compose pull api
+
+            # Перезапускаем всё
             docker compose down --remove-orphans || true
             docker compose up -d
-            echo "🚀 Всё запущено!"
-            echo "API: http://$(hostname -I | awk '{print $1}'):8000/health"
-            echo "Kafka: localhost:9092"
+
+            echo "✅ Deploy completed!"
+            echo "📍 API: http://$(hostname -I | awk '{print $1}'):8000/health"
+            echo "📍 Kafka: localhost:9092"
+
+            # Показываем последние логи
             docker compose logs --tail=30 api
