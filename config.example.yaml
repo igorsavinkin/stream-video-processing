@@ -59,7 +59,7 @@ rate_limit_default: "60/minute"
 
 # Kafka Consumer (for Parquet pipeline)
 # Enable/disable the Kafka consumer service
-kafka_consumer_enabled: false
+kafka_consumer_enabled: true
 # Consumer group ID for offset tracking
 kafka_consumer_group_id: kafka-to-parquet-group
 # Maximum number of records to fetch in a single poll

@@ -48,7 +48,7 @@ class Settings(BaseSettings):
     rate_limit_default: str = "60/minute"  # rate limit for other endpoints
 
     # Kafka to Parquet consumer settings
-    kafka_consumer_enabled: bool = False
+    kafka_consumer_enabled: bool = True
     kafka_consumer_group_id: str = "inference-parquet-consumer"
     kafka_consumer_auto_offset_reset: str = "earliest"
     kafka_consumer_max_poll_records: int = 100
@@ -58,7 +58,7 @@ class Settings(BaseSettings):
     kafka_consumer_log_level: str = "INFO"
 
     # Parquet writer settings
-    parquet_s3_bucket: Optional[str] = None
+    parquet_s3_bucket: Optional[str] = "ml-platform-data-lake"
     parquet_s3_prefix: str = "inference-parquet"
     parquet_batch_size: int = 1000
     parquet_flush_interval_seconds: int = 60
@@ -155,6 +155,14 @@ def load_settings() -> Settings:
     yaml_settings = YamlSettings(**payload)
     merged = settings.model_copy(update=yaml_settings.model_dump(exclude_none=True))
     return merged
+
+
+def load_config(config_path: str) -> Settings:
+    """Load configuration from YAML file and update global settings."""
+    os.environ["APP_CONFIG_PATH"] = config_path
+    global settings
+    settings = load_settings()
+    return settings
 
 
 settings = load_settings()

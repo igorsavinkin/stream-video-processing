@@ -1,0 +1,45 @@
+name: Build & Deploy to VPS (with Kafka)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PAT }}
+
+      - name: Build & push api image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/$$   {{ github.repository_owner }}/   $${{ github.event.repository.name }}/stream-ml:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/stream-ml
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            docker compose pull api          # только api из GHCR
+            docker compose down --remove-orphans || true
+            docker compose up -d
+            echo "🚀 Всё запущено!"
+            echo "API: http://$(hostname -I | awk '{print $1}'):8000/health"
+            echo "Kafka: localhost:9092"
+            docker compose logs --tail=30 api

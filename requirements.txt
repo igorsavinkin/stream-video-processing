@@ -4,6 +4,7 @@ opencv-python-headless==4.10.0.84
 numpy==2.3.5
 torch==2.9.1
 torchvision==0.24.1
+torchaudio==2.9.1
 pillow==10.4.0
 pydantic==2.9.2
 pydantic-settings==2.5.2

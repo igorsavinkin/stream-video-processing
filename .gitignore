@@ -28,3 +28,4 @@ config.yaml
 *.jpeg
 *.png
 *.gif
+*.csv
