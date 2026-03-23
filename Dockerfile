@@ -3,7 +3,7 @@ FROM python:3.12-slim AS builder
 WORKDIR /build
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential gcc libgl1-mesa-glx libglib2.0-0 ffmpeg libsm6 libxext6 \
+    build-essential gcc libgl1 libglib2.0-0 ffmpeg libsm6 libxext6 libxrender-dev \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
@@ -16,7 +16,7 @@ FROM python:3.12-slim
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgl1-mesa-glx libglib2.0-0 ffmpeg libsm6 libxext6 \
+    libgl1 libglib2.0-0 ffmpeg libsm6 libxext6 libxrender-dev \
     && rm -rf /var/lib/apt/lists/* \
     && useradd -m -u 1000 appuser
 
@@ -25,7 +25,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 
 COPY . .
 
-RUN chown -R appuser:appuser /app
+RUN chown -R appuser:appuser /app && chmod -R 755 /app
 USER appuser
 
 EXPOSE 8000

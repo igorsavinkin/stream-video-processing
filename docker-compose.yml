@@ -1,4 +1,4 @@
-version: '3.9'
+#version: '3.9'
 
 services:
   zookeeper:
@@ -41,7 +41,7 @@ services:
       start_period: 60s
 
   api:
-    image: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}/stream-ml:latest   # ← будет заменено автоматически
+    build: .
     # build: .          # ← закомментировано, чтобы не билдить на VPS
     restart: unless-stopped
     ports:
@@ -52,7 +52,7 @@ services:
     environment:
       APP_CONFIG_PATH: /app/config.example.yaml
       APP_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      APP_RTSP_URL: ${APP_RTSP_URL:-rtsp://твой-реальный-rtsp:8554/live}   # ← поменяй на реальный
+      APP_RTSP_URL: ${APP_RTSP_URL}   # ← поменяй на реальный
       APP_MODEL_NAME: mobilenet_v3_small
       APP_DEVICE: cpu
       APP_FRAME_WIDTH: 640
