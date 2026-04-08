@@ -1,46 +1,40 @@
-name: Build & Deploy to VPS (FastAPI + Kafka)
+name: Deploy to VPS (vps_deploy)
 
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch:
+    branches:
+      - vps_deploy
+  workflow_dispatch:           # можно запускать вручную
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true   # убирает warning
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: 🛠️ Set up Docker Buildx (fix cache issues)
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          version: latest
-          driver-opts: image=moby/buildkit:latest
 
-      - name: Login to GHCR
+      - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_PAT }}
 
-      - name: Build & push
+      - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}/stream-ml:latest
-          # Временно отключаем проблемный кэш, чтобы точно заработало
+          tags: ghcr.io/igorsavinkin/stream-video-processing/stream-ml:latest
           cache-from: type=gha
-          cache-to: type=gha,mode=min   # min вместо max — стабильнее
-          # Если всё равно будет падать — потом уберём cache совсем
+          cache-to: type=gha,mode=max
 
-      - name: Deploy to VPS
+      - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -49,8 +43,13 @@ jobs:
           script: |
             cd /opt/stream-ml
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            
+            # Только обновляем api сервис
             docker compose pull api
+            
             docker compose down --remove-orphans || true
-            docker compose up -d
-            echo "✅ Deploy done!"
-            docker compose logs --tail=40 api
+            docker compose up -d api
+            
+            echo "✅ Deploy completed successfully!"
+            echo "📍 URL: http://178.208.88.6:8000"
+            docker compose logs --tail=20 api
