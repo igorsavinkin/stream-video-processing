@@ -54,10 +54,10 @@ http://178.208.88.6:8000/docs
 
 
 ## Автоматический деплой
-Каждый git push в ветку vps_deploy автоматически:
+Каждый `git push` в ветку `vps_deploy` автоматически:
 
 - Собирает Docker-образ
-- Пушит в GitHub Container Registry
+- Пушит в GitHub Container Registry (GHCR)
 - VPS подтягивает новый образ и перезапускает контейнер
 
 **main** ветка остаётся чистой для портфолио и демонстрации.
@@ -77,6 +77,7 @@ git push origin vps_deploy
  - Faster R-CNN Person Detector (опционально) — определение наличия человека
 
 Переключение модели:
+
 ```Bash
 # В .env
 APP_MODEL_NAME=mobilenet_v3_small     # или person_detector
