@@ -30,3 +30,4 @@ config.yaml
 *.gif
 *.csv
 *.mp4
+captured/
