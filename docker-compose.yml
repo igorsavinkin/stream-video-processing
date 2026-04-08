@@ -1,3 +1,4 @@
+
 #version: '3.9'
 
 services:
@@ -14,7 +15,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
 
   kafka:
     image: confluentinc/cp-kafka:7.3.0
@@ -38,26 +38,32 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s
 
   api:
     build: .
-    # build: .          # ← закомментировано, чтобы не билдить на VPS
     restart: unless-stopped
     ports:
       - "8000:8000"
     volumes:
+      - ./test.mp4:/app/test.mp4:ro
+      - ./captured:/app/captured
       - ./config.example.yaml:/app/config.example.yaml:ro
-      - ./captured:/app/captured          # если используешь inference_capture
     environment:
       APP_CONFIG_PATH: /app/config.example.yaml
-      APP_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      APP_RTSP_URL: ${APP_RTSP_URL}   # ← поменяй на реальный
+      APP_KAFKA_BOOTSTRAP_SERVERS: kafka:29092     # ← теперь правильно с ":"
+      APP_RTSP_URL: ${APP_RTSP_URL}
       APP_MODEL_NAME: mobilenet_v3_small
       APP_DEVICE: cpu
       APP_FRAME_WIDTH: 640
       APP_FRAME_HEIGHT: 360
       APP_FRAME_SAMPLE_FPS: 2
-    depends_on:
-      kafka:
-        condition: service_healthy
+      APP_LOG_LEVEL: info
+    mem_limit: 1.5g # main limit
+    mem_reservation: 800m
+    deploy: 
+      resources:
+        limits: 
+          memory: 1.5g 
+    #depends_on:
+    #  kafka:
+    #    condition: service_healthy
