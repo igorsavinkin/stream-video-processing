@@ -1,82 +1,119 @@
-# PC Camera → VPS ML Service
+# Streaming PC Camera to VPS for ML Processing (via Tailscale)
 
-**Как настроить веб-камеру (или USB-камеру) с твоего Windows-ПК для работы с приложением на VPS**
+This document outlines how to securely stream a webcam from a local Windows PC to a remote VPS for real-time ML processing using a Tailscale VPN tunnel. 
 
-## Общая схема
+Using Tailscale eliminates the need for public port forwarding, firewall configuration, and static IPs, while providing an encrypted, low-latency WireGuard tunnel directly between your PC and VPS.
 
-**ПК (Windows)** → FFmpeg → MediaMTX → ngrok (TCP-туннель) → **VPS** → ML-модель → `/stream`
+## Architecture
+
+```text
+[PC Camera] 
+    │
+    ▼ 
+  (FFmpeg)
+[Local RTSP Server (mediamtx)] ──► (Tailscale VPN Tunnel) ──► [VPS (OpenCV / ML Model)]
+(localhost:8554)                                              (100.x.x.x:8554)
+```
+
+## Prerequisites
+
+* A Windows PC with a webcam.
+* A VPS running your ML pipeline (e.g., Python, OpenCV, YOLO).
+* [Tailscale](https://tailscale.com/) installed and logged in on **both** the PC and the VPS.
 
 ---
 
-## Шаг 1: Установка MediaMTX на ПК
+## Step 1: Configure Tailscale Network
 
-1. Скачай последнюю версию MediaMTX:
-   [https://github.com/bluenviron/mediamtx/releases](https://github.com/bluenviron/mediamtx/releases)
-
-2. Скачай файл `mediamtx_vX.X.X_windows_amd64.zip`
-
-3. Распакуй в удобную папку, например:
-   `C:\mediamtx\`
-
-4. Запусти `mediamtx.exe` (двойной клик).
-
-   Должно появиться окно с надписью:
+1. Install Tailscale on your Windows PC and log into your account.
+2. Install Tailscale on your VPS (Linux) (e.g., `curl -fsSL https://tailscale.com/install.sh | sh` then `sudo tailscale up`) and log into the *same* account.
+3. On your **Windows PC**, open a command prompt and get your Tailscale IP:
+   ```bash
+   tailscale ip -4
    ```
-   [RTSP] listener opened on :8554
-   ```
+   *Note this IP (it will look like `100.x.x.x`). This is the IP your VPS will use to reach your PC.*
 
 ---
 
-## Шаг 2: Запуск трансляции камеры в MediaMTX
+## Step 2: Set Up Local RTSP Server on PC
 
-Открой **новое** окно `PowerShell` и выполни команду:
+FFmpeg can encode video, but it cannot act as an RTSP server by itself. We use [mediamtx](https://github.com/bluenviron/mediamtx) (formerly rtsp-simple-server) to receive the local stream and serve it.
 
-```powershell
-ffmpeg -f dshow -i video="USB Video Device" ^
-  -video_size 640x360 -framerate 15 ^
-  -c:v libx264 -preset ultrafast -tune zerolatency ^
-  -f rtsp rtsp://localhost:8554/live
-```
-
-> Замени `"USB Video Device"` на название своей камеры (узнать можно командой `ffmpeg -list_devices true -f dshow -i dummy`).
-
-Оставь это окно открытым.
+1. Go to the [mediamtx Releases page](https://github.com/bluenviron/mediamtx/releases).
+2. Download the latest `mediamtx_vX.X.X_windows_amd64.zip`.
+3. Extract the `.zip` folder and double-click `mediamtx.exe`.
+4. Leave this window running in the background. It is now listening on `127.0.0.1:8554`.
 
 ---
 
-## Шаг 3: Создание публичного туннеля (ngrok)
+## Step 3: Stream Camera via FFmpeg
 
-1. Скачай ngrok: [https://ngrok.com/download](https://ngrok.com/download)
+Open a new Command Prompt on your PC. We will use FFmpeg to capture the webcam, encode it efficiently for network streaming, and push it to the local mediamtx server.
 
-2. Распакуй и положи `ngrok.exe` в удобную папку.
-
-3. Открой **новое** окно `PowerShell` и выполни:
-
-```powershell
-ngrok tcp 8554
-```
-
-Ngrok выдаст адрес вида:
-```
-tcp://X.tcp.eu.ngrok.io:XXXXX
-```
-
-Скопируй этот адрес полностью.
-
----
-
-## Шаг 4: Настройка приложения на VPS
-
-На VPS выполни:
-
+First, find your camera name:
 ```bash
-cd /opt/stream-ml
+ffmpeg -list_devices true -f dshow -i dummy
+```
+
+Then, start the stream (replace `"USB Video Device"` with your actual camera name from the previous command):
+```bash
+ffmpeg -rtbufsize 100M -f dshow -i video="USB Video Device" -c:v libx264 -preset ultrafast -tune zerolatency -f rtsp rtsp://127.0.0.1:8554/live
+```
+
+**Why these specific flags?**
+* `-rtbufsize 100M`: Prevents the `real-time buffer too full` error common with raw webcam inputs. It makes buffer size 100MB.
+* `-c:v libx264 -preset ultrafast -tune zerolatency`: Encodes to H.264 with minimal CPU overhead and latency, ideal for ML inference.
+
+---
+#### Fast check of work 
+1. Try to open the stream in VLC on PC:
+Main menu: Media -> Open Network Stream `rtsp://100.69.204.123:8554/live`
+
+2. Or directly in PC or VPS command line:
+```
+ffplay rtsp://100.69.204.123:8554/live
+```
+3. Check in VPS thru Python script:
+```python
+import cv2
+
+# Replace with your PC's Tailscale IP from Step 1
+PC_TAILSCALE_IP = "100.69.204.123" 
+STREAM_URL = f"rtsp://{PC_TAILSCALE_IP}:8554/live"
+
+cap = cv2.VideoCapture(STREAM_URL)
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        print("Failed to grab frame")
+        break
+    
+    # --- YOUR ML PROCESSING GOES HERE ---
+    # e.g., frame = model(frame)
+    # -----------------------------------
+
+    # (Optional) If you need to view the frame, write it to a web stream or save locally
+    # cv2.imwrite("debug_frame.jpg", frame)
+
+cap.release()
+```
+
+## Step 4: Consume Stream on VPS
+
+Your PC is now securely broadcasting the stream over your Tailscale network. 
+
+#### Setting up application on VPS
+Run the following commands on the VPS or directly edit `.env` file:
+
+```cd /opt/stream-ml
 
 cat > .env << 'EOF'
 COMPOSE_PROJECT_NAME=stream-ml
 
 # Камера с ПК через ngrok
-APP_RTSP_URL=rtsp://X.tcp.eu.ngrok.io:XXXXX/live     # ← вставь свой ngrok адрес
+
+APP_RTSP_URL=rtsp://100.69.204.123:8554/live     # ←- PC TAILSCALE IP 
 
 APP_MODEL_NAME=mobilenet_v3_small
 APP_DEVICE=cpu
@@ -86,93 +123,37 @@ APP_FRAME_SAMPLE_FPS=5
 APP_LOG_LEVEL=info
 APP_KAFKA_BOOTSTRAP_SERVERS=
 EOF
+`
+Reload and restart application:
 ```
-
-Перезапусти приложение:
-
-```bash
 docker compose down
 docker compose up -d --force-recreate api
 ```
 
----
+#### Verification
+Open in browser:
 
-## Шаг 5: Проверка
-
-Открой в браузере:
-- http://178.208.88.6:8000/health
-- http://178.208.88.6:8000/stream
+http://178.208.88.6:8000/health
+http://178.208.88.6:8000/stream
 
 ---
 
-## Полезные команды
+#### Useful commands
 
-**Перезапуск всего на VPS:**
-```bash
+Restart all on VPS:
+```
 cd /opt/stream-ml
 docker compose restart api
 ```
 
-**Посмотреть логи:**
-```bash
+View logs:
+```
 docker compose logs --tail=50 api
 ```
 
-**Перезапуск ngrok + FFmpeg:**
-Закрой окна и запусти заново.
+## Troubleshooting
 
----
-
-## Возможные проблемы и решения
-
-- **/stream пустой** → ngrok не запущен / FFmpeg остановился
-- **I/O error в FFmpeg** → камера используется другой программой (закрой Zoom/Teams)
-- **Failed to resolve hostname** → неправильный ngrok адрес
-- **Высокая нагрузка** → используй `mobilenet_v3_small` и уменьши `APP_FRAME_SAMPLE_FPS`
-
----
-
-## Автоматический запуск при старте Windows
-Чтобы MediaMTX + FFmpeg + ngrok запускались автоматически при включении ПК:
-### Вариант 1: Простой (рекомендуется для начала)
-
-1. Создай файл `start_camera.bat` в папке `C:\mediamtx\`:
-
-```batch
-@echo off
-cd C:\mediamtx
-
-:: Запуск MediaMTX
-start "" mediamtx.exe
-
-:: Ждём 3 секунды
-timeout /t 3 /nobreak >nul
-
-:: Запуск FFmpeg (замени название камеры при необходимости)
-start "" ffmpeg -f dshow -i video="USB Video Device" -video_size 640x360 -framerate 15 -c:v libx264 -preset ultrafast -tune zerolatency -f rtsp rtsp://localhost:8554/live
-
-:: Запуск ngrok
-start "" ngrok tcp 8554
+* **Connection Timeout on VPS:** Ensure Tailscale is running and logged in on *both* machines. Try pinging the PC from the VPS: `ping 100.x.x.x`.
+* **Dropped Frames on PC:** If you still see `frame dropped!` in FFmpeg, try increasing `-rtbufsize` to `200M` or lowering your camera's native resolution in Windows Device Manager.
+* **High Latency:** Ensure no other heavy processes are running on the PC. The `ultrafast` preset in FFmpeg is already optimized for the lowest possible latency.
 ```
-
-После запуска в `PowerShell` будет отображаться:
-```
-Forwarding: tcp://X.tcp.eu.ngrok.io:XXXXX -> localhost:8554
-```
-и этот адрес `tcp://X.tcp.eu.ngrok.io:XXXXX/live` нужно будет вписать в `.env` на VPS в переменную `APP_RTSP_URL`.
-
-2. Добавь этот .bat файл в автозагрузку:
-Нажми `Win + R` → введи `shell:startup` → `Enter`
-Скопируй файл `start_camera.bat` в открывшуюся папку
-
-
-### Вариант 2: Более надёжный (Task Scheduler)
-
-1. Открой Планировщик заданий (Task Scheduler)
-2. Создай новое задание:
-- Название: `Start Camera Stream`
-- Запускать с наивысшими правами
-- Запускать независимо от входа в систему
-
-- В триггере выбери: `При запуске компьютера`  
-- В Действии укажи путь к `start_camera.bat`
