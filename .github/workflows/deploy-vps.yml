@@ -35,10 +35,8 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}/stream-ml:latest
-          # Временно отключаем проблемный кэш, чтобы точно заработало
-          cache-from: type=gha
-          cache-to: type=gha,mode=min   # min вместо max — стабильнее
-          # Если всё равно будет падать — потом уберём cache совсем
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}/stream-ml:buildcache
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}/stream-ml:buildcache,mode=min
 
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.3
