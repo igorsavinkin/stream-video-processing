@@ -6,6 +6,10 @@ on:
       - vps_deploy
   workflow_dispatch:
 
+permissions:
+  contents: read
+  packages: write  # <--- THIS allows GITHUB_TOKEN to push to GHCR
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -22,7 +26,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT }}
+          password: ${{ secrets.GITHUB_TOKEN }}  # <--- Changed from GHCR_PAT
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -40,13 +44,14 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          command_timeout: '30m'          # ← Увеличили таймаут до 30 минут
+          command_timeout: '30m'
           script: |
             cd /opt/stream-ml
-            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            # We still use GHCR_PAT here because your VPS is outside of GitHub
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u igorsavinkin --password-stdin
             
             echo "🔄 Pulling new image..."
-            docker compose pull api --quiet   # quieter output
+            docker compose pull api --quiet
             
             echo "🔄 Restarting service..."
             docker compose down --remove-orphans || true
