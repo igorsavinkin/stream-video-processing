@@ -35,8 +35,8 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ghcr.io/igorsavinkin/stream-video-processing/stream-ml:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=ghcr.io/igorsavinkin/stream-video-processing/stream-ml:buildcache
+          cache-to: type=registry,ref=ghcr.io/igorsavinkin/stream-video-processing/stream-ml:buildcache,mode=min
 
       - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v1.0.3
