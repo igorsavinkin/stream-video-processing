@@ -392,3 +392,6 @@ pytest tests/test_kafka_to_parquet.py -v
 
 ### Detailed Documentation
 For architecture diagrams, deployment guides, and operational notes, see [KAFKA_TO_PARQUET.md](KAFKA_TO_PARQUET.md).
+
+
+<!-- Security scan triggered at 2026-09-05 07:47:11 -->
