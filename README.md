@@ -395,3 +395,5 @@ For architecture diagrams, deployment guides, and operational notes, see [KAFKA_
 
 
 <!-- Security scan triggered at 2026-09-05 07:47:11 -->
+
+<!-- Security scan triggered at 2026-10-07 11:52:37 -->
